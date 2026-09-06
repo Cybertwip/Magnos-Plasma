@@ -1,0 +1,26 @@
+{
+  "source_directory": "/Users/cybertwip/Downloads/Magnos",
+  "sources": {
+    "schem.kicad_sch": {
+      "copy": "magnos_reference.kicad_sch",
+      "sha256": "33d75a4d7c73397591f4ac6435fb9e8494d19808cca36276d1496d47558daccd",
+      "bytes": 200232
+    },
+    "Magnos.kicad_sch": {
+      "copy": "magnos_earlier_reference.kicad_sch",
+      "sha256": "9bcc087d92bd0342c21a7f90caa2ecd6dfe84417c7ccb11b063134faaacaddb0",
+      "bytes": 41037
+    }
+  },
+  "shield_area_m2": 180.0,
+  "shield_radius_m": 7.569397566060481,
+  "coil_length_m": 2.5,
+  "coil_turns": 180.0,
+  "coil_resistance_ohm": 0.004,
+  "coil_inductance_h": 50.0,
+  "coil_limit_a": 221048.53207207687,
+  "coil_hold_voltage_v": 884.1941282883075,
+  "coil_loss_w": 195449814.12488,
+  "coil_stored_energy_j": 1221561338280.4998,
+  "geometry_status": "Conceptual: only shield area, sheath thickness, coil length and turn count come from app.js. Other dimensions are assumed."
+}

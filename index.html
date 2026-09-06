@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Solar Slingshot · Plasma Cruise</title>
+  <link rel="stylesheet" href="./style.css">
+</head>
+<body>
+  <main class="app-shell compact-shell">
+    <header class="topbar compact-topbar">
+      <div>
+        <p class="eyebrow">3D N-body departure · powered gravity assists · maximum-power plasma cruise</p>
+        <h1>Solar Slingshot → Alpha Centauri</h1>
+      </div>
+      <div class="top-actions">
+        <button id="playButton" type="button">Pause</button>
+        <button id="resetButton" type="button" class="secondary">Reset</button>
+        <button id="launchButton" type="button" class="accent">Launch rocket</button>
+      </div>
+    </header>
+
+    <section class="panel simple-controls">
+      <div class="simple-control-block">
+        <div class="section-heading">
+          <h2>Playback</h2>
+          <span id="statusBadge" class="badge">RUNNING</span>
+        </div>
+        <label class="control-row" for="speedSlider">
+          <span>Simulation speed</span>
+          <strong id="speedValue">10.00 days/s</strong>
+        </label>
+        <input id="speedSlider" type="range" min="-2" max="2.5623" step="0.01" value="1">
+        <div class="range-hints"><span>0.01 d/s</span><span>365 d/s</span></div>
+      </div>
+
+      <div class="simple-control-block">
+        <h2>Camera</h2>
+        <label class="control-row" for="focusSelect"><span>Focus</span></label>
+        <select id="focusSelect">
+          <option value="Sol">Sun</option>
+          <option value="Earth" selected>Earth</option>
+          <option value="Jupiter">Jupiter</option>
+          <option value="Barycenter">Barycenter</option>
+          <option value="Rocket">Rocket</option>
+          <option value="Alpha Centauri">Alpha Centauri</option>
+          <option value="Cruise overview">Rocket + Alpha overview</option>
+        </select>
+      </div>
+
+      <div class="simple-control-block power-summary">
+        <h2>Plasma mode</h2>
+        <strong>Automatic maximum power</strong>
+        <span>Powered between flybys + continuous escape/cruise · 20 T coil · thermal equilibrium 76–79%</span>
+      </div>
+    </section>
+
+    <section class="workspace compact-workspace">
+      <section class="viewport-card">
+        <div id="viewport" class="viewport" aria-label="Interactive 3D solar system simulation">
+          <canvas id="sceneCanvas"></canvas>
+          <div id="labels" class="labels-layer" aria-hidden="true"></div>
+
+          <div class="mission-clocks" aria-live="polite">
+            <article class="mission-clock earth-clock">
+              <span class="clock-kicker">EARTH OBSERVER</span>
+              <strong id="earthClockValue">0.000000 Earth yr</strong>
+              <small id="earthClockProjection">Alpha arrival: waiting for launch</small>
+            </article>
+            <article class="mission-clock traveler-clock">
+              <span class="clock-kicker">TRAVELER PROPER TIME</span>
+              <strong id="travelerClockValue">0.000000 Earth yr</strong>
+              <small id="travelerClockProjection">Alpha arrival: waiting for launch</small>
+            </article>
+            <div id="relativityDelta" class="relativity-delta">Traveler/Earth difference: —</div>
+          </div>
+
+          <div class="viewport-help">Drag to orbit · Wheel to zoom · Sun and planets move barycentrically</div>
+        </div>
+      </section>
+
+      <aside class="panel telemetry-panel compact-telemetry-panel">
+        <div class="section-heading">
+          <h2>Flight</h2>
+          <span class="badge data">LIVE</span>
+        </div>
+
+        <dl class="telemetry primary-telemetry">
+          <div><dt>Rocket state</dt><dd id="rocketStateStat">Not launched</dd></div>
+          <div><dt>Rocket speed</dt><dd id="rocketSpeedStat">—</dd></div>
+          <div><dt>Peak speed</dt><dd id="peakSpeedStat">—</dd></div>
+          <div><dt>Heliocentric speed</dt><dd id="helioSpeedStat">—</dd></div>
+          <div><dt>Solar distance</dt><dd id="solarDistanceStat">—</dd></div>
+          <div><dt>Solar-system exit</dt><dd id="solarExitStat">—</dd></div>
+          <div><dt>Alpha arrival</dt><dd id="alphaStat">—</dd></div>
+          <div><dt>Optimal route</dt><dd id="routeStat">Optimizer runs at launch</dd></div>
+        </dl>
+
+        <section class="drive-readout">
+          <h2>Magnos beta voltage booster</h2>
+          <p class="muted tiny">Auxiliary supply envelope · 5 V / 1 A input ceiling · assumed 80% efficiency. Transformer gain is unverified.</p>
+          <label for="magnosGain">Assumed voltage gain</label>
+          <input id="magnosGain" type="number" min="1" max="6000" step="1" value="1">
+          <label for="magnosLoad">Equivalent output load</label>
+          <select id="magnosLoad">
+            <option value="1000000000">1 GΩ</option>
+            <option value="1000000">1 MΩ</option>
+            <option value="1000">1 kΩ</option>
+          </select>
+          <dl class="telemetry compact-drive">
+            <div><dt>Input / loss</dt><dd id="magnosInput">—</dd></div>
+            <div><dt>Output</dt><dd id="magnosOutput">—</dd></div>
+            <div><dt>Status</dt><dd id="magnosStatus">—</dd></div>
+          </dl>
+          <p class="muted tiny">This envelope does not power the simulated plasma drive. <a href="magnos_beta_booster.kicad_sch" download>Reference circuit</a></p>
+        </section>
+
+        <section class="drive-readout">
+          <div class="section-heading">
+            <h2>Plasma drive</h2>
+            <span class="badge power">MAX</span>
+          </div>
+          <dl class="telemetry compact-drive">
+            <div><dt>Electrical</dt><dd id="plasmaElectricalStat">—</dd></div>
+            <div><dt>Magnetic circuit</dt><dd id="plasmaMagneticStat">—</dd></div>
+            <div><dt>Thrust</dt><dd id="plasmaThrustStat">—</dd></div>
+            <div><dt>Acceleration</dt><dd id="plasmaAccelerationStat">—</dd></div>
+            <div><dt>EMF heat shield</dt><dd id="shieldEmfStat">—</dd></div>
+            <div><dt>Shield attenuation</dt><dd id="shieldAttenuationStat">—</dd></div>
+          </dl>
+        </section>
+
+        <section class="thermal-readout">
+          <div class="section-heading">
+            <h2>Thermals</h2>
+            <span class="badge thermal">70–80%</span>
+          </div>
+          <div class="thermal-gauges">
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Magnetic coil</span><strong id="coilTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="coilTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Plasma reactor</span><strong id="reactorTempValue">500 K</strong></div>
+              <div class="thermal-track"><span id="reactorTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Radiator</span><strong id="radiatorTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="radiatorTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Hull</span><strong id="hullTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="hullTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>EMF heat shield</span><strong id="shieldTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="shieldTempFill" class="thermal-fill"></span></div>
+            </div>
+          </div>
+          <div class="thermal-summary-line"><span>Governor</span><strong id="thermalGovernorStat">76–79% equilibrium / 80% ceiling</strong></div>
+          <div class="thermal-summary-line"><span>Radiator</span><strong id="radiatorDeployStat">stowed</strong></div>
+          <p class="muted tiny">The drive raises accelerator voltage until the radiator/thermal envelope is saturated. The forward shield adds an active plasma sheath using the uploaded v×B motional-EMF/MHD attenuation model; propulsion is reduced only when any monitored component, including the heat shield, approaches the 80% modeled ceiling.</p>
+        </section>
+      </aside>
+    </section>
+
+    <!-- Internal fixed configuration. Kept in the DOM so the simulation logic stays deterministic without cluttering the UI. -->
+    <div class="internal-controls" hidden aria-hidden="true">
+      <input id="injectionSlider" type="range" min="0" max="20" step="0.1" value="3.2"><span id="injectionValue"></span>
+      <input id="flybySlider" type="range" min="100" max="50000" step="100" value="500"><span id="flybyValue"></span>
+      <input id="cruiseThrustSlider" type="range" min="0" max="100" step="1" value="100"><span id="cruiseThrustValue"></span>
+      <input id="casimirGapSlider" type="range" min="10" max="500" step="5" value="100"><span id="casimirGapValue"></span>
+      <input id="brakeToggle" type="checkbox" checked>
+      <input id="oberthSlider" type="range" min="0" max="20" step="0.1" value="8"><span id="oberthValue"></span>
+      <input id="periSlider" type="range" min="3" max="20" step="0.5" value="8"><span id="periValue"></span>
+      <input id="trailToggle" type="checkbox" checked>
+      <input id="labelToggle" type="checkbox" checked>
+      <input id="rocketTrailToggle" type="checkbox" checked>
+
+      <span id="dateStat"></span><span id="elapsedStat"></span><span id="sunBaryStat"></span><span id="energyDriftStat"></span>
+      <span id="assistGainStat"></span><span id="propulsorStat"></span><span id="casimirStat"></span><span id="spaceTempStat"></span>
+      <span id="closestStat"></span><span id="vinfStat"></span><span id="oberthStat"></span>
+    </div>
+  </main>
+
+  <script type="module" src="./app.js"></script>
+</body>
+</html>

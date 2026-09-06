@@ -1,0 +1,336 @@
+{
+  "source": "reference/magnos-beta-5.0-alpha.kicad_sch",
+  "sha256": "e8fd84967371aa4fad97b04fc5b91358e182707ec28e4ec1ace263348597fe9a",
+  "components": [
+    {
+      "reference": "C6",
+      "value": "0.47uF"
+    },
+    {
+      "reference": "C8",
+      "value": "0.47uF"
+    },
+    {
+      "reference": "C9",
+      "value": "0.57uF"
+    },
+    {
+      "reference": "C10",
+      "value": "0.47uF"
+    },
+    {
+      "reference": "D1",
+      "value": "600V 25A"
+    },
+    {
+      "reference": "D7",
+      "value": "600V 25A"
+    },
+    {
+      "reference": "D9",
+      "value": "600V 25A"
+    },
+    {
+      "reference": "D10",
+      "value": "600V 25A"
+    },
+    {
+      "reference": "J1",
+      "value": "Input"
+    },
+    {
+      "reference": "J3",
+      "value": "AC Output"
+    },
+    {
+      "reference": "J4",
+      "value": "DC Payload"
+    },
+    {
+      "reference": "L1",
+      "value": "1mH"
+    },
+    {
+      "reference": "Q2",
+      "value": "Darlington NPN"
+    },
+    {
+      "reference": "Q5",
+      "value": "Darlington NPN"
+    },
+    {
+      "reference": "Q8",
+      "value": "Darlington NPN"
+    },
+    {
+      "reference": "R1",
+      "value": "22R"
+    },
+    {
+      "reference": "T1",
+      "value": "Transformer_1P_2S"
+    },
+    {
+      "reference": "T2",
+      "value": "Transformer_1P_2S"
+    },
+    {
+      "reference": "TR3",
+      "value": "TEZ0.5-D-1"
+    },
+    {
+      "reference": "U1",
+      "value": "HHG1D-1"
+    },
+    {
+      "reference": "Y2",
+      "value": "2500Hz"
+    },
+    {
+      "reference": "Y3",
+      "value": "Squared 60Hz"
+    },
+    {
+      "reference": "Y4",
+      "value": "Squared 200KHz"
+    },
+    {
+      "reference": "Y5",
+      "value": "Squared 250Hz"
+    }
+  ],
+  "nets": [
+    {
+      "name": "Net-(C9-Pad1)",
+      "pins": [
+        "C9.1",
+        "TR3.4"
+      ]
+    },
+    {
+      "name": "Net-(C10-Pad1)",
+      "pins": [
+        "C10.1",
+        "R1.2"
+      ]
+    },
+    {
+      "name": "Net-(C10-Pad2)",
+      "pins": [
+        "C10.2",
+        "C8.1"
+      ]
+    },
+    {
+      "name": "Net-(D1-A)",
+      "pins": [
+        "D1.2",
+        "L1.1",
+        "Q2.1"
+      ]
+    },
+    {
+      "name": "Net-(D1-K)",
+      "pins": [
+        "D1.1",
+        "R1.1"
+      ]
+    },
+    {
+      "name": "Net-(D7-A)",
+      "pins": [
+        "C6.1",
+        "D7.2",
+        "J1.1",
+        "Y2.14",
+        "Y3.14",
+        "Y4.14",
+        "Y5.14"
+      ]
+    },
+    {
+      "name": "Net-(D9-A)",
+      "pins": [
+        "D9.2",
+        "Y3.8"
+      ]
+    },
+    {
+      "name": "Net-(D9-K)",
+      "pins": [
+        "D9.1",
+        "Q8.2"
+      ]
+    },
+    {
+      "name": "Net-(D10-A)",
+      "pins": [
+        "D10.2",
+        "J4.1"
+      ]
+    },
+    {
+      "name": "Net-(D10-K)",
+      "pins": [
+        "D10.1",
+        "D7.1",
+        "L1.2"
+      ]
+    },
+    {
+      "name": "Net-(J1-Pin_2)",
+      "pins": [
+        "C6.2",
+        "C8.2",
+        "J1.2",
+        "Q2.3",
+        "Q5.3",
+        "Q8.3",
+        "T1.1",
+        "Y2.7",
+        "Y3.7",
+        "Y4.7"
+      ]
+    },
+    {
+      "name": "Net-(J3-Pin_1)",
+      "pins": [
+        "J3.1",
+        "U1.2"
+      ]
+    },
+    {
+      "name": "Net-(J3-Pin_2)",
+      "pins": [
+        "J3.2",
+        "TR3.1"
+      ]
+    },
+    {
+      "name": "Net-(J4-Pin_2)",
+      "pins": [
+        "J4.2",
+        "Q8.1"
+      ]
+    },
+    {
+      "name": "Net-(Q2-B)",
+      "pins": [
+        "Q2.2",
+        "Y4.8"
+      ]
+    },
+    {
+      "name": "Net-(Q5-B)",
+      "pins": [
+        "Q5.2",
+        "Y2.8"
+      ]
+    },
+    {
+      "name": "Net-(Q5-C)",
+      "pins": [
+        "Q5.1",
+        "T2.1"
+      ]
+    },
+    {
+      "name": "Net-(T1-AB)",
+      "pins": [
+        "T1.2",
+        "T2.2"
+      ]
+    },
+    {
+      "name": "Net-(T1-SA)",
+      "pins": [
+        "T1.3",
+        "U1.1"
+      ]
+    },
+    {
+      "name": "Net-(T1-SB)",
+      "pins": [
+        "C9.2",
+        "T1.4"
+      ]
+    },
+    {
+      "name": "Net-(T1-SC)",
+      "pins": [
+        "T1.5",
+        "TR3.3"
+      ]
+    },
+    {
+      "name": "Net-(T1-SD)",
+      "pins": [
+        "T1.6",
+        "T2.3"
+      ]
+    },
+    {
+      "name": "Net-(T2-SB)",
+      "pins": [
+        "T2.4",
+        "T2.5"
+      ]
+    },
+    {
+      "name": "Net-(T2-SD)",
+      "pins": [
+        "T2.6",
+        "TR3.2"
+      ]
+    },
+    {
+      "name": "Net-(Y5-GND)",
+      "pins": [
+        "U1.4",
+        "Y5.7"
+      ]
+    },
+    {
+      "name": "Net-(Y5-OUT)",
+      "pins": [
+        "U1.3",
+        "Y5.8"
+      ]
+    },
+    {
+      "name": "unconnected-(Y2-NC-Pad1)",
+      "pins": [
+        "Y2.1"
+      ]
+    },
+    {
+      "name": "unconnected-(Y3-NC-Pad1)",
+      "pins": [
+        "Y3.1"
+      ]
+    },
+    {
+      "name": "unconnected-(Y4-NC-Pad1)",
+      "pins": [
+        "Y4.1"
+      ]
+    },
+    {
+      "name": "unconnected-(Y5-NC-Pad1)",
+      "pins": [
+        "Y5.1"
+      ]
+    }
+  ],
+  "annotations_not_verified_ratings": {
+    "input_v": 5,
+    "input_a": 1,
+    "output_ac_v": 30000,
+    "output_ac_a": 0.087
+  },
+  "behavioral_assumptions": {
+    "efficiency": 0.8,
+    "default_gain": 1,
+    "default_load_ohm": 1000000000.0
+  }
+}

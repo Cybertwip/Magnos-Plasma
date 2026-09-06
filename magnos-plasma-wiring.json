@@ -1,0 +1,701 @@
+{
+  "source": "reference/magnos-beta-5.0-alpha.kicad_sch",
+  "blocks": [
+    {
+      "reference": "J101",
+      "value": "External 5 V / 1 A ceiling",
+      "pins": {
+        "1": {
+          "function": "+",
+          "net": "PWR_RAW"
+        },
+        "2": {
+          "function": "-",
+          "net": "INPUT_RETURN"
+        },
+        "3": {
+          "function": "CHASSIS",
+          "net": "CHASSIS"
+        }
+      }
+    },
+    {
+      "reference": "F101",
+      "value": "Input fuse - rating TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "PWR_RAW"
+        },
+        "2": {
+          "function": "2",
+          "net": "PWR_FUSED"
+        }
+      }
+    },
+    {
+      "reference": "S101",
+      "value": "Master disconnect",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "PWR_FUSED"
+        },
+        "2": {
+          "function": "2",
+          "net": "INPUT_5V"
+        }
+      }
+    },
+    {
+      "reference": "S102",
+      "value": "Emergency stop NC",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "INPUT_5V"
+        },
+        "2": {
+          "function": "2",
+          "net": "ESTOP_OK"
+        }
+      }
+    },
+    {
+      "reference": "S103",
+      "value": "Enclosure interlock NC",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "ESTOP_OK"
+        },
+        "2": {
+          "function": "2",
+          "net": "COVER_OK"
+        }
+      }
+    },
+    {
+      "reference": "S104",
+      "value": "Thermal cutoff NC",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "COVER_OK"
+        },
+        "2": {
+          "function": "2",
+          "net": "ENABLE"
+        }
+      }
+    },
+    {
+      "reference": "R101",
+      "value": "Enable pulldown - TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "ENABLE"
+        },
+        "2": {
+          "function": "2",
+          "net": "INPUT_RETURN"
+        }
+      }
+    },
+    {
+      "reference": "U101",
+      "value": "Sequencer / shutdown controller - TBD",
+      "pins": {
+        "1": {
+          "function": "VCC",
+          "net": "INPUT_5V"
+        },
+        "2": {
+          "function": "GND",
+          "net": "INPUT_RETURN"
+        },
+        "3": {
+          "function": "ENABLE",
+          "net": "ENABLE"
+        },
+        "4": {
+          "function": "SH_TEMP",
+          "net": "SH_TEMP"
+        },
+        "5": {
+          "function": "PR_TEMP",
+          "net": "PR_TEMP"
+        },
+        "6": {
+          "function": "CMD_SH",
+          "net": "CMD_SH"
+        },
+        "7": {
+          "function": "CMD_PR",
+          "net": "CMD_PR"
+        },
+        "8": {
+          "function": "CMD_GAS",
+          "net": "CMD_GAS"
+        }
+      }
+    },
+    {
+      "reference": "J102",
+      "value": "Shield temperature sensor",
+      "pins": {
+        "1": {
+          "function": "VCC",
+          "net": "INPUT_5V"
+        },
+        "2": {
+          "function": "RETURN",
+          "net": "INPUT_RETURN"
+        },
+        "3": {
+          "function": "SIGNAL",
+          "net": "SH_TEMP"
+        }
+      }
+    },
+    {
+      "reference": "J103",
+      "value": "Propulsor temperature sensor",
+      "pins": {
+        "1": {
+          "function": "VCC",
+          "net": "INPUT_5V"
+        },
+        "2": {
+          "function": "RETURN",
+          "net": "INPUT_RETURN"
+        },
+        "3": {
+          "function": "SIGNAL",
+          "net": "PR_TEMP"
+        }
+      }
+    },
+    {
+      "reference": "J104",
+      "value": "Frame bond",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "CHASSIS"
+        },
+        "2": {
+          "function": "2",
+          "net": "CHASSIS"
+        }
+      }
+    },
+    {
+      "reference": "D101",
+      "value": "HV diode - rating TBD",
+      "pins": {
+        "1": {
+          "function": "A",
+          "net": "BOOST_AC_A"
+        },
+        "2": {
+          "function": "K",
+          "net": "HV_RAW_P"
+        }
+      }
+    },
+    {
+      "reference": "D102",
+      "value": "HV diode - rating TBD",
+      "pins": {
+        "1": {
+          "function": "A",
+          "net": "BOOST_AC_B"
+        },
+        "2": {
+          "function": "K",
+          "net": "HV_RAW_P"
+        }
+      }
+    },
+    {
+      "reference": "D103",
+      "value": "HV diode - rating TBD",
+      "pins": {
+        "1": {
+          "function": "A",
+          "net": "HV_RETURN"
+        },
+        "2": {
+          "function": "K",
+          "net": "BOOST_AC_A"
+        }
+      }
+    },
+    {
+      "reference": "D104",
+      "value": "HV diode - rating TBD",
+      "pins": {
+        "1": {
+          "function": "A",
+          "net": "HV_RETURN"
+        },
+        "2": {
+          "function": "K",
+          "net": "BOOST_AC_B"
+        }
+      }
+    },
+    {
+      "reference": "F102",
+      "value": "HV fuse - rating TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "HV_RAW_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "HV_BUS_P"
+        }
+      }
+    },
+    {
+      "reference": "C101",
+      "value": "DC-link capacitor - C/V TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "HV_BUS_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "HV_RETURN"
+        }
+      }
+    },
+    {
+      "reference": "R102",
+      "value": "Permanent discharge resistor - TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "HV_BUS_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "HV_RETURN"
+        }
+      }
+    },
+    {
+      "reference": "TP101",
+      "value": "HV differential monitor / isolation TBD",
+      "pins": {
+        "1": {
+          "function": "IN+",
+          "net": "HV_BUS_P"
+        },
+        "2": {
+          "function": "IN-",
+          "net": "HV_RETURN"
+        },
+        "3": {
+          "function": "LV_GND",
+          "net": "INPUT_RETURN"
+        },
+        "4": {
+          "function": "OUT",
+          "net": "HV_SENSE"
+        }
+      }
+    },
+    {
+      "reference": "J105",
+      "value": "Service monitor",
+      "pins": {
+        "1": {
+          "function": "HV_SENSE",
+          "net": "HV_SENSE"
+        },
+        "2": {
+          "function": "RETURN",
+          "net": "INPUT_RETURN"
+        }
+      }
+    },
+    {
+      "reference": "F201",
+      "value": "Branch fuse - TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "BOOST_DC_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "SH_DC_IN"
+        }
+      }
+    },
+    {
+      "reference": "U201",
+      "value": "Isolated driver / limiter - TBD",
+      "pins": {
+        "1": {
+          "function": "IN+",
+          "net": "SH_DC_IN"
+        },
+        "2": {
+          "function": "IN-",
+          "net": "BOOST_DC_N"
+        },
+        "3": {
+          "function": "CTRL",
+          "net": "CMD_SH"
+        },
+        "4": {
+          "function": "CTRL_RTN",
+          "net": "INPUT_RETURN"
+        },
+        "5": {
+          "function": "OUT+",
+          "net": "SH_COIL_P"
+        },
+        "6": {
+          "function": "OUT-",
+          "net": "SH_COIL_N"
+        }
+      }
+    },
+    {
+      "reference": "J201",
+      "value": "SH two-pin coil connector",
+      "pins": {
+        "1": {
+          "function": "POS",
+          "net": "SH_COIL_P"
+        },
+        "2": {
+          "function": "RETURN",
+          "net": "SH_COIL_N"
+        }
+      }
+    },
+    {
+      "reference": "L201",
+      "value": "Shield coil L/R/turns TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "SH_COIL_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "SH_COIL_N"
+        }
+      }
+    },
+    {
+      "reference": "F301",
+      "value": "Branch fuse - TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "BOOST_DC_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "PR_DC_IN"
+        }
+      }
+    },
+    {
+      "reference": "U301",
+      "value": "Isolated driver / limiter - TBD",
+      "pins": {
+        "1": {
+          "function": "IN+",
+          "net": "PR_DC_IN"
+        },
+        "2": {
+          "function": "IN-",
+          "net": "BOOST_DC_N"
+        },
+        "3": {
+          "function": "CTRL",
+          "net": "CMD_PR"
+        },
+        "4": {
+          "function": "CTRL_RTN",
+          "net": "INPUT_RETURN"
+        },
+        "5": {
+          "function": "OUT+",
+          "net": "PR_COIL_P"
+        },
+        "6": {
+          "function": "OUT-",
+          "net": "PR_COIL_N"
+        }
+      }
+    },
+    {
+      "reference": "J301",
+      "value": "PR two-pin coil connector",
+      "pins": {
+        "1": {
+          "function": "POS",
+          "net": "PR_COIL_P"
+        },
+        "2": {
+          "function": "RETURN",
+          "net": "PR_COIL_N"
+        }
+      }
+    },
+    {
+      "reference": "L301",
+      "value": "Propulsor coil 50 H / 0.004 ohm model",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "PR_COIL_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "PR_COIL_N"
+        }
+      }
+    },
+    {
+      "reference": "F401",
+      "value": "Branch fuse - TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "HV_BUS_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "SH_HV_IN"
+        }
+      }
+    },
+    {
+      "reference": "U401",
+      "value": "Isolated driver / limiter - TBD",
+      "pins": {
+        "1": {
+          "function": "IN+",
+          "net": "SH_HV_IN"
+        },
+        "2": {
+          "function": "IN-",
+          "net": "HV_RETURN"
+        },
+        "3": {
+          "function": "CTRL",
+          "net": "CMD_SH"
+        },
+        "4": {
+          "function": "CTRL_RTN",
+          "net": "INPUT_RETURN"
+        },
+        "5": {
+          "function": "OUT+",
+          "net": "SH_ELECTRODE_P"
+        },
+        "6": {
+          "function": "OUT-",
+          "net": "SH_ELECTRODE_N"
+        }
+      }
+    },
+    {
+      "reference": "J401",
+      "value": "Two-pin HV feedthrough",
+      "pins": {
+        "1": {
+          "function": "POS",
+          "net": "SH_ELECTRODE_P"
+        },
+        "2": {
+          "function": "RETURN",
+          "net": "SH_ELECTRODE_N"
+        }
+      }
+    },
+    {
+      "reference": "Z401",
+      "value": "Shield electrodes / plasma load",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "SH_ELECTRODE_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "SH_ELECTRODE_N"
+        }
+      }
+    },
+    {
+      "reference": "F501",
+      "value": "Branch fuse - TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "HV_BUS_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "PR_HV_IN"
+        }
+      }
+    },
+    {
+      "reference": "U501",
+      "value": "Isolated driver / limiter - TBD",
+      "pins": {
+        "1": {
+          "function": "IN+",
+          "net": "PR_HV_IN"
+        },
+        "2": {
+          "function": "IN-",
+          "net": "HV_RETURN"
+        },
+        "3": {
+          "function": "CTRL",
+          "net": "CMD_PR"
+        },
+        "4": {
+          "function": "CTRL_RTN",
+          "net": "INPUT_RETURN"
+        },
+        "5": {
+          "function": "OUT+",
+          "net": "PR_ELECTRODE_P"
+        },
+        "6": {
+          "function": "OUT-",
+          "net": "PR_ELECTRODE_N"
+        }
+      }
+    },
+    {
+      "reference": "J501",
+      "value": "Two-pin HV feedthrough",
+      "pins": {
+        "1": {
+          "function": "POS",
+          "net": "PR_ELECTRODE_P"
+        },
+        "2": {
+          "function": "RETURN",
+          "net": "PR_ELECTRODE_N"
+        }
+      }
+    },
+    {
+      "reference": "Z501",
+      "value": "Propulsor anode / cathode plasma load",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "PR_ELECTRODE_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "PR_ELECTRODE_N"
+        }
+      }
+    },
+    {
+      "reference": "U601",
+      "value": "Gas valve driver + flyback / TBD",
+      "pins": {
+        "1": {
+          "function": "VCC",
+          "net": "INPUT_5V"
+        },
+        "2": {
+          "function": "GND",
+          "net": "INPUT_RETURN"
+        },
+        "3": {
+          "function": "CTRL",
+          "net": "CMD_GAS"
+        },
+        "4": {
+          "function": "OUT+",
+          "net": "GAS_P"
+        },
+        "5": {
+          "function": "OUT-",
+          "net": "GAS_N"
+        }
+      }
+    },
+    {
+      "reference": "Y601",
+      "value": "Injection valve - rating TBD",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "GAS_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "GAS_N"
+        }
+      }
+    },
+    {
+      "reference": "U602",
+      "value": "Isolated neutralizer supply / TBD",
+      "pins": {
+        "1": {
+          "function": "IN+",
+          "net": "HV_BUS_P"
+        },
+        "2": {
+          "function": "IN-",
+          "net": "HV_RETURN"
+        },
+        "3": {
+          "function": "CTRL",
+          "net": "CMD_PR"
+        },
+        "4": {
+          "function": "CTRL_RTN",
+          "net": "INPUT_RETURN"
+        },
+        "5": {
+          "function": "OUT+",
+          "net": "NEUT_P"
+        },
+        "6": {
+          "function": "OUT-",
+          "net": "NEUT_N"
+        }
+      }
+    },
+    {
+      "reference": "Z601",
+      "value": "Neutralizer cathode equivalent",
+      "pins": {
+        "1": {
+          "function": "1",
+          "net": "NEUT_P"
+        },
+        "2": {
+          "function": "2",
+          "net": "NEUT_N"
+        }
+      }
+    }
+  ]
+}

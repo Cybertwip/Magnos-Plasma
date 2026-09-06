@@ -1,0 +1,321 @@
+:root {
+  color-scheme: dark;
+  font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  background: #070a0f;
+  color: #e9eef7;
+  --panel: #0f151f;
+  --panel-2: #121b28;
+  --border: #263346;
+  --muted: #8fa1b8;
+  --accent: #6eb7ff;
+  --accent-2: #8b79ff;
+  --success: #6de0a6;
+}
+
+* { box-sizing: border-box; }
+
+html, body { margin: 0; min-height: 100%; background: #070a0f; }
+body { min-width: 320px; }
+button, input, select { font: inherit; }
+
+.app-shell {
+  width: min(1800px, 100%);
+  margin: 0 auto;
+  padding: 18px;
+}
+
+.topbar {
+  display: flex;
+  justify-content: space-between;
+  gap: 18px;
+  align-items: center;
+  padding: 4px 2px 16px;
+}
+
+.eyebrow {
+  margin: 0 0 5px;
+  color: var(--accent);
+  font-size: 12px;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+}
+
+h1 { margin: 0; font-size: clamp(24px, 3vw, 38px); line-height: 1.05; }
+h2 { margin: 0 0 12px; font-size: 14px; text-transform: uppercase; letter-spacing: .08em; }
+
+.top-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+button {
+  min-height: 40px;
+  padding: 0 15px;
+  border: 1px solid #35506f;
+  border-radius: 9px;
+  background: #182638;
+  color: #edf5ff;
+  cursor: pointer;
+}
+button:hover { background: #20324a; }
+button.secondary { background: #111924; border-color: var(--border); }
+button.accent { background: #174a76; border-color: #2e78b5; }
+button:focus-visible, select:focus-visible, input:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.workspace {
+  display: grid;
+  grid-template-columns: minmax(230px, 290px) minmax(480px, 1fr) minmax(250px, 320px);
+  gap: 12px;
+  align-items: stretch;
+}
+
+.panel, .viewport-card {
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: linear-gradient(180deg, rgba(18,27,40,.98), rgba(11,16,24,.98));
+  overflow: hidden;
+}
+
+.panel { padding: 16px; }
+.panel section + section { margin-top: 20px; padding-top: 18px; border-top: 1px solid #202c3d; }
+.section-heading { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.badge { border: 1px solid #315a48; background: #10271f; color: var(--success); border-radius: 999px; padding: 4px 8px; font-size: 10px; font-weight: 800; letter-spacing: .08em; }
+.badge.data { border-color: #384c6d; background: #131e2e; color: #9dc8ff; }
+
+.control-row { display: flex; justify-content: space-between; gap: 14px; align-items: baseline; margin: 12px 0 7px; font-size: 13px; color: #c8d5e6; }
+.control-row strong { color: #fff; font-size: 12px; font-variant-numeric: tabular-nums; }
+input[type="range"] { width: 100%; accent-color: var(--accent); }
+select { width: 100%; min-height: 40px; padding: 0 10px; border: 1px solid #314157; border-radius: 8px; background: #0b111a; color: #e9eef7; }
+.range-hints { display: flex; justify-content: space-between; color: #657992; font-size: 10px; }
+.muted { color: var(--muted); line-height: 1.45; font-size: 12px; }
+.tiny { font-size: 10px; }
+.toggle-grid { display: grid; gap: 8px; color: #c8d5e6; font-size: 12px; }
+.toggle-grid label { display: flex; gap: 8px; align-items: center; }
+.check-row { display: flex; align-items: center; gap: 9px; margin-top: 10px; color: #c8d5e6; font-size: 12px; line-height: 1.35; }
+.check-row input { flex: 0 0 auto; accent-color: var(--accent); }
+
+.viewport-card { min-width: 0; }
+.viewport {
+  position: relative;
+  width: 100%;
+  min-height: 690px;
+  height: clamp(690px, 76vh, 920px);
+  overflow: hidden;
+  background: radial-gradient(circle at 50% 45%, #101726 0%, #05070b 62%, #020305 100%);
+  touch-action: none;
+}
+#sceneCanvas { display: block; width: 100%; height: 100%; }
+.labels-layer { position: absolute; inset: 0; pointer-events: none; overflow: hidden; }
+.body-label {
+  position: absolute;
+  transform: translate(-50%, -140%);
+  padding: 2px 5px;
+  border-radius: 4px;
+  background: rgba(4, 8, 14, .72);
+  color: #dce8f8;
+  border: 1px solid rgba(102, 132, 168, .25);
+  white-space: nowrap;
+  font-size: 10px;
+}
+.body-label.rocket { color: #fff3b2; border-color: rgba(255, 211, 96, .5); font-weight: 800; }
+.mission-clocks {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  right: 12px;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+  pointer-events: none;
+}
+
+.mission-clock {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid rgba(108, 137, 174, .34);
+  border-radius: 10px;
+  background: rgba(5, 10, 17, .76);
+  backdrop-filter: blur(8px);
+}
+
+.mission-clock .clock-kicker {
+  display: block;
+  margin-bottom: 4px;
+  color: #8fa1b8;
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: .12em;
+}
+
+.mission-clock strong {
+  display: block;
+  color: #f4f8ff;
+  font-size: clamp(13px, 1.3vw, 18px);
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mission-clock small {
+  display: block;
+  margin-top: 4px;
+  color: #9fb0c4;
+  font-size: 9px;
+  line-height: 1.35;
+}
+
+.earth-clock { border-color: rgba(110, 183, 255, .42); }
+.traveler-clock { border-color: rgba(139, 121, 255, .46); }
+
+.relativity-delta {
+  grid-column: 1 / -1;
+  justify-self: center;
+  max-width: 100%;
+  padding: 5px 9px;
+  border: 1px solid rgba(109, 224, 166, .27);
+  border-radius: 999px;
+  background: rgba(7, 20, 15, .76);
+  color: #8de6b6;
+  font-size: 9px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.viewport-help { position: absolute; left: 12px; bottom: 10px; color: #71839a; font-size: 11px; pointer-events: none; }
+
+.telemetry { display: grid; gap: 0; margin: 0; }
+.telemetry div { display: flex; justify-content: space-between; gap: 16px; padding: 9px 0; border-bottom: 1px solid #1f2a3a; }
+.telemetry dt { color: var(--muted); font-size: 11px; }
+.telemetry dd { margin: 0; color: #f3f7fc; text-align: right; font-size: 11px; font-weight: 700; font-variant-numeric: tabular-nums; }
+.source-note { margin-top: 18px; }
+.source-note p { color: #9fb0c4; font-size: 11px; line-height: 1.5; }
+footer { padding: 12px 4px 0; color: #65758b; font-size: 10px; line-height: 1.4; }
+
+@media (max-width: 1100px) {
+  .workspace { grid-template-columns: 250px minmax(0, 1fr); }
+  .telemetry-panel { grid-column: 1 / -1; }
+  .telemetry { grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 18px; }
+}
+
+@media (max-width: 760px) {
+  .app-shell { padding: 10px; }
+  .topbar { align-items: flex-start; flex-direction: column; }
+  .top-actions { justify-content: flex-start; }
+  .workspace { grid-template-columns: 1fr; }
+  .viewport-card { order: -1; }
+  .viewport { min-height: 520px; height: 66vh; }
+  .mission-clocks { grid-template-columns: 1fr; }
+  .mission-clock { padding: 8px 10px; }
+  .mission-clock strong { font-size: 13px; }
+  .telemetry { grid-template-columns: 1fr; }
+}
+
+.badge.thermal {
+  border-color: #6c5632;
+  background: #271d10;
+  color: #ffd18a;
+}
+
+.thermal-readout {
+  margin-top: 18px;
+  padding-top: 18px;
+  border-top: 1px solid #202c3d;
+}
+
+.thermal-gauges {
+  display: grid;
+  gap: 11px;
+}
+
+.thermal-row {
+  display: grid;
+  gap: 6px;
+}
+
+.thermal-label {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  color: #9fb0c4;
+  font-size: 10px;
+}
+
+.thermal-label strong {
+  color: #f3f7fc;
+  font-variant-numeric: tabular-nums;
+}
+
+.thermal-track {
+  position: relative;
+  height: 8px;
+  border: 1px solid #2c3b50;
+  border-radius: 999px;
+  overflow: hidden;
+  background: #0a1018;
+}
+
+.thermal-fill {
+  display: block;
+  width: 0;
+  height: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, #5f9ddd, #71d0b4);
+  transition: width .14s linear, background .14s linear;
+}
+
+.thermal-fill[data-level="warm"] {
+  background: linear-gradient(90deg, #d1a759, #e3824f);
+}
+
+.thermal-fill[data-level="hot"] {
+  background: linear-gradient(90deg, #e66d4f, #ff4f5f);
+}
+
+.controls-panel strong {
+  font-weight: 800;
+}
+
+/* Compact flight UI */
+.compact-shell { width: min(1600px, 100%); }
+.compact-topbar { padding-bottom: 12px; }
+.simple-controls {
+  display: grid;
+  grid-template-columns: minmax(260px, 1.35fr) minmax(190px, .8fr) minmax(220px, .9fr);
+  gap: 22px;
+  align-items: end;
+  margin-bottom: 12px;
+  padding: 13px 16px;
+}
+.simple-control-block { min-width: 0; }
+.simple-control-block h2 { margin-bottom: 7px; }
+.simple-control-block .control-row { margin-top: 5px; }
+.power-summary { align-self: stretch; display: flex; flex-direction: column; justify-content: center; }
+.power-summary strong { color: #f5f8fd; font-size: 13px; }
+.power-summary span { margin-top: 4px; color: var(--muted); font-size: 10px; line-height: 1.4; }
+.compact-workspace { grid-template-columns: minmax(0, 1fr) minmax(290px, 350px); }
+.compact-telemetry-panel { min-width: 0; }
+.primary-telemetry dd, .compact-drive dd { max-width: 64%; overflow-wrap: anywhere; }
+.drive-readout { margin-top: 18px; padding-top: 18px; border-top: 1px solid #202c3d; }
+.badge.power { border-color: #375d80; background: #11263a; color: #8ec7ff; }
+.thermal-summary-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  margin-top: 11px;
+  color: var(--muted);
+  font-size: 10px;
+}
+.thermal-summary-line strong { color: #f3f7fc; text-align: right; font-variant-numeric: tabular-nums; }
+.internal-controls { display: none !important; }
+
+@media (max-width: 980px) {
+  .simple-controls { grid-template-columns: 1fr 1fr; }
+  .power-summary { grid-column: 1 / -1; }
+  .compact-workspace { grid-template-columns: 1fr; }
+  .compact-telemetry-panel { grid-column: auto; }
+  .viewport-card { order: -1; }
+}
+
+@media (max-width: 620px) {
+  .simple-controls { grid-template-columns: 1fr; }
+  .power-summary { grid-column: auto; }
+  .viewport { min-height: 500px; height: 66vh; }
+}

@@ -1,0 +1,17 @@
+Plasma electrical operating-point equivalent -- not a hardware design
+* Magnos source retained separately; no verified control interface available.
+* Coil hold voltage, zero initial current: asymptote equals app's 20 T limit.
+V1 COIL_P 0 DC 884.194128
+R1 COIL_P COIL_L 0.004
+L1 COIL_L 0 50.0 IC=0
+* Accelerator at 6.6 MV. R2 is an operating-point surrogate for plasma.
+V2 BEAM_P 0 DC 6.6e6
+R2 BEAM_P 0 29.8576966
+* Shield electrode capped at 900000 A on-state; 10% duty average.
+* Does not include motional current, sheath dynamics or photon heat.
+V3 SHIELD_P 0 DC 40000
+R3 SHIELD_P 0 0.444444444
+.op
+.save v(COIL_L) i(L1)
+.tran 100 100000 uic
+.end
