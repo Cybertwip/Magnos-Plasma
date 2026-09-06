@@ -250,8 +250,19 @@ def stub_label(ref, pin, net):
     label_at(net, end, net + ref + pin + 'sl')
 
 
+def stub_end(ref, pin):
+    p = pins[(ref, pin)]
+    xs = [xy[0] for (r, n), xy in pins.items() if r == ref]
+    dx = -grid(4) if p[0] <= sum(xs) / len(xs) else grid(4)
+    return (round(p[0] + dx, 2), p[1])
+
+
 def join(ref_a, pin_a, ref_b, pin_b, key, via='h'):
-    manhattan(pins[(ref_a, pin_a)], pins[(ref_b, pin_b)], key, via=via)
+    a = stub_end(ref_a, pin_a)
+    b = stub_end(ref_b, pin_b)
+    manhattan(a, b, key, via=via)
+    junction(a, key + 'ja')
+    junction(b, key + 'jb')
 
 
 def pair_bus(driver, load, connector, net_p, net_n):
@@ -365,7 +376,6 @@ def power_channel(prefix, y, dc_net, return_net, cmd, out_p, out_n, load_ref, lo
           [('POS', out_p, 'L'), ('RETURN', out_n, 'L')],
           grid(460), y + grid(28))
     two(load_ref, load_value, out_p, out_n, grid(540), y)
-    join('F' + prefix, '2', 'U' + prefix, '1', prefix + 'in')
     pair_bus('U' + prefix, load_ref, 'J' + prefix, out_p, out_n)
 
 
