@@ -2869,7 +2869,7 @@ for(const id of ["routeOrigin","routeTarget"]) {
   }
   select.value=id==="routeOrigin" ? "Earth" : "Mars";
 }
-const autoOption=document.createElement("option");autoOption.value="auto";autoOption.textContent="Alpha Cen via automatic assists";document.getElementById("routeTarget").append(autoOption);
+const autoOption=document.createElement("option");autoOption.value="auto";autoOption.textContent="Alpha Cen via powered slingshots";document.getElementById("routeTarget").append(autoOption);
 launchButton.addEventListener("click", launchRocket);
 for(const id of ["engineCountSlider","plasmaVoltageSlider","voltageScale","boosterCount","radiatorTarget"]) document.getElementById(id).addEventListener("input",syncControls);
 for(const id of ["routeOrigin","routeTarget"]) document.getElementById(id).addEventListener("change",()=>{ updateMissionSummary(); updateRoutePreview(); });

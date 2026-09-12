@@ -1,9 +1,0 @@
-Magnos beta ideal power-limited envelope (not a switching model)
-* Source connectivity in magnos_beta_booster.xml; gain/efficiency assumed.
-.param gain=1 eta=0.8 imax=1 rload=1e9
-VINPUT IN 0 5
-BINPUT IN 0 I=V(OUT)*V(OUT)/({rload}*{eta}*max(V(IN),1e-12))
-BOUTPUT OUT 0 V=min({gain}*V(IN),sqrt({eta}*max(V(IN),0)*{imax}*{rload}))
-RLOAD OUT 0 {rload}
-.op
-.end

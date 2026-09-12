@@ -1,34 +1,125 @@
-The requested pair is `magnos-plasma.kicad_sch` and `magnos-plasma.scad`.
+# Model and validation
 
-The schematic is a single KiCad sheet: the original Magnos beta circuit on the left, plus 40 added system blocks on the 1.27 mm grid. Total 64 components (24 original + 40 added). Added interconnect is drawn copper for the input/enable chain, rectifier-to-fuse, monitor, coil/electrode driver-to-feedthrough buses, valve, and neutralizer. Distant power and control pins keep named stubs so they join the original J1/J3/J4 ports. The original files under `reference/` are unchanged.
+This is an educational simulator and a functional electrical/CAD architecture.
+It is not a verified MV/GV/TV power supply or a feasible interstellar spacecraft.
+The original beta schematic and PCB under `reference/` are retained unchanged.
 
-The new connections include input fuse/disconnect, emergency stop and thermal/enclosure enable chain, controller and temperature sensors, AC bridge rectifier, DC-link capacitor and discharge resistor, differential voltage monitor, two coil channels, two electrode channels, injection valve, and neutralizer. Added diode pins explicitly identify anode/cathode. Chassis, input return, booster DC return, and rectified HV return are distinct nets. J104 is a chassis bond (both contacts on CHASSIS). The source J1 simulation metadata reverses the apparent input polarity; the adaptation uses pin 1 as input positive because it feeds the oscillator VCC pins. This discrepancy needs resolving before a component-level simulation.
+## Transfers and planet locks
 
-This is complete **functional wiring**, not a complete fabrication-ready power-electronics design. Current drivers, isolation converters, sequencing, valve suppression, protection ratings, capacitance, and bleed resistance marked TBD require actual design. Original transistor/transformer models, winding ratios and measured waveforms are absent. No claim is made that the beta circuit will operate as annotated. The low-voltage Y5/U1 control island in the original source is retained as drawn; its return is not automatically bonded to input return. Source part annotations and footprints also require reconciliation.
+`transfer-planner.mjs` constructs a cubic Hermite arc using actual departure
+and arrival velocities as endpoint tangents. The tangent heading uses `atan2`.
+An inverse tangent alone cannot determine a powered trajectory: for the path
+r(t), required plasma acceleration is **r″(t) + μ r / |r|³**. The duration search
+predicts moving endpoints, samples acceleration and solar clearance at 257
+points, and reserves 40% of ideal available thrust for tracking/startup.
+This is a sampled feasible-path search, not a global optimal-control solver.
 
-The source annotation is 5 V / 1 A input and approximately 30 kVAC / 87 mA output. Multiplying the output annotations gives 2610 VA; the input annotation gives 5 W. They do not establish simultaneous sustainable output ratings, power factor, peak/RMS conventions, or transformer gain. The app therefore exposes an **auxiliary, ideal power-limited envelope**, with assumed gain (default 1), adjustable load, and assumed 80% efficiency. Its maximum available output is 4 W, shared by any loads. This cannot run the application's hypothetical plasma drive. No booster output is added to that drive's existing power supply.
+Live flight integrates solar gravity and thermally/current-limited plasma
+thrust with position/velocity feedback; it does not set the position directly
+to the curve. Radiators deploy during powered planetary transfers and the
+available deployed area limits their power during startup. Other planets move
+with the existing N-body model. Planetary perturbations along a leg are omitted;
+flybys are ideal patched-conic events inside the target sphere of influence.
 
-`magnos_booster_equivalent.cir` implements that power-conserving envelope, not the transistor-level beta circuit. `magnos_beta_booster.xml` preserves the actual source connectivity. `plasma_equivalent.cir` and `plasma_equivalent.kicad_sch` are separate ideal operating-point equivalents for the simulator: 50 H / 0.004 ohm engine coil, 6.6 MV accelerator load, and a 40 kV duty-averaged electrode load. They are not achievable ratings of Magnos. The simulated 20 T coil limit corresponds to approximately 221 kA, 195 MW winding loss and 1.22 TJ magnetic energy.
+Ordinary routes match the planet velocity with a finite capture burn after
+entering its sphere of influence. A successful capture stores the actual
+planet-relative offset and applies a kinematic stationkeeping constraint.
+The ship then follows the planet, with clocks and cooling continuing. This
+lock is a simulator convenience, not a solved parking orbit, landing, or a
+fuel-accounted stationkeeping system. The next leg begins from the locked
+position and velocity without resetting the date, clocks or temperatures.
+Missed encounters and failed captures do not lock or teleport.
 
-The Python-generated OpenSCAD assembly uses the app's 180 m² shield area, 50 mm sheath thickness, 2.5 m coil length and 180 illustrated turns. `magnos_beta_board.scad` uses the beta PCB's 90 × 110 mm outline and 1.6 mm thickness. Housing, chamber, coil radii, structural dimensions, feedthrough placement and cable paths are assumptions. The folded radiator envelopes do not represent the deployed radiator area. Cable colors distinguish coil power, HV positive/return, sensor bundles and valve power. Cable diameter is exaggerated for visibility; these are route centerlines, not ampacity, creepage, clearance, shielding, or thermal qualification. Both requested files are standalone: the generated `magnos-plasma.scad` embeds the assembly and board modules, and the schematic embeds its symbol definitions.
+Powered slingshots use the same tangent arcs with a nonzero incoming
+planet-relative velocity, then conserve that velocity's magnitude through the
+ideal gravity-assist turn. Candidate arrival excess speeds are 20, 80, 250 and
+600 km/s. The optimizer ranks average chord distance/time, then outgoing speed,
+among feasible outward candidates. It does not add fictitious plasma delta-v
+to gravitational energy gain. Lambert/Hohmann are retained for comparison and
+regression tests. A Hohmann baseline uses a different arrival phase; it is not
+an equal-endpoint solution to the powered boundary conditions.
 
-Rebuild:
+## Electrical power, wiring and CAD
 
-```sh
-python3 generate_plasma_design.py
-python3 generate_magnos_plasma.py
-kicad-cli sch export netlist --format kicadxml magnos-plasma.kicad_sch -o magnos-plasma.xml
-node tests/physics.mjs
-node tests/magnos.mjs
-node tests/transfers.mjs
-python3 tests/wiring.py
-openscad -o /tmp/magnos-plasma.csg magnos-plasma.scad
-ngspice -b magnos_booster_equivalent.cir
-ngspice -b plasma_equivalent.cir
-```
+The beta source annotation is 5 V / 1 A. Its 30 kVAC / 87 mA output annotation
+is not a verified simultaneous operating point. The source J1 simulation
+metadata conflicts with its apparent polarity; the adaptation uses pin 1 as
+positive because it feeds oscillator VCC. This remains unresolved hardware work.
 
-The first generator requires KiCad CLI (PATH or the standard macOS application location) for source netlist extraction. OpenSCAD CSG compilation checks syntax and geometry construction, not manifold STL fabrication. No browser frame-rate measurement has been performed.
+The rectifier feeds 1–8 cascaded isolated functional Magnos stages. The final
+positive and return feed the HV branches, discharge resistor, capacitor and
+differential monitor. Input return, original beta DC return, rectifier return,
+final HV return, and chassis remain distinct. Original J4 supplies the coil
+converter inputs; LV control uses explicit isolated control interfaces.
 
-Orbit and motion changes: the existing JPL element decoder passes Kepler residual, epoch, orbital-bound and vis-viva checks, plus a J2000 Earth reference position. Transfer interpolation now uses a Hermite curve with a moving endpoint and analytic path velocity. Encounters retain a planet offset, the solar-dive transition avoids an extra integration half-step, and trail geometry is uploaded once per frame. Telemetry refreshes at 10 Hz. Transfers remain an illustrative planner, not gravity-integrated Lambert trajectories; impulsive powered transitions may change velocity. JPL Table 1 initialization is valid for 1800–2050; long N-body extrapolation is not a precision ephemeris.
+Assuming 80% efficiency for the beta front end and each additional stage,
+**P_available = 5 × 0.8^(N+1) W**. This is a generous shared upper envelope:
+coil, control and auxiliary consumption would further reduce HV output.
+The app load envelope clamps voltage using sqrt(P_available × R_load).
+More stages never create power. MV/GV/TV are requested voltage scales, not
+insulation, conductor, switching-device or transformer ratings. Converter
+circuits, protection ratings, spacing, creepage and vacuum breakdown remain
+unresolved. The simulated plasma drive has a separate hypothetical TW source;
+none of that source's output is attributed to the beta booster.
 
-Sources: [JPL approximate planetary positions](https://ssd.jpl.nasa.gov/planets/approx_pos.html); [NASA electric propulsion overview](https://www.nasa.gov/space-technology-mission-directorate/tdm/solar-electric-propulsion/). Electric propulsion expels reaction mass; magnetic shielding in a thruster does not establish a spacecraft-wide photon or relativistic particle shield.
+The single-sheet drawing uses three functional columns and explicit segmented
+wire rails. Crossings connect only at junction dots. Labels identify conductors;
+removing **all** net labels preserves every exported net's pin partition.
+The tests also check that isolated domains do not merge. Functional converter
+blocks are wired at their interfaces; their internal electronics are still TBD.
+
+One source generates the netlist, box wires and external harness. The box
+includes all non-load KiCad components, including the original beta circuit.
+The separate engine model contains exactly 19 conductors: two each for shield
+coil, propulsion coil, shield electrode, propulsion electrode, gas valve and
+neutralizer; three each for shield/engine sensors; one chassis bond. Both sensor
+supplies and returns are explicit. Every CAD endpoint references an actual
+KiCad pin. The box and engine models share connector terminal coordinates.
+Geometry is conceptual; cable centerlines and exaggerated dimensions are not
+fabrication or electrical-clearance validation. Shield area and engine coil
+length/turn count come from app constants; other dimensions are assumptions.
+
+## Thermal and interstellar limits
+
+Radiation rejects heat as εσA(T⁴−T_background⁴). Radiator target choices are
+600, 900 and 1216 K, with at most 3.2 million m² deployed area. Engine count
+shares that thermal budget; increasing voltage or count cannot multiply the
+available cooling power. The accelerator model uses P_beam = 0.75 VI and
+F = 2P_beam/v_exhaust, with v_exhaust = 1.5 million m/s and 60,000 kg fixed mass.
+Coil magnetics and cooling are represented as one aggregate system, not a
+separate duplicated coil for every selected engine. Reaction-mass inventory,
+power-source mass, detailed plasma physics and structural feasibility are absent.
+The rapid transit numbers therefore describe the hypothetical model only.
+
+Alpha Centauri A/B is 4.37 light-years away; the previous 4.2465 value referred
+to the nearer Proxima component. Under two **Earth years** is impossible. An
+ideal rest-to-rest constant-proper-acceleration calculation can give shorter
+traveler time through relativity; the UI reports both and identifies whether
+the two-traveler-year target is met. The baseline is about 5.09 Earth years /
+2.01 traveler years before planetary travel, fuel constraints and shield losses.
+Cooling the radiators reduces acceleration and makes this target harder.
+
+Reverse plasma thrust is the arrival brake. The live cruise velocity update
+integrates proper velocity γv, and braking considers stopping distance as well
+as the planned flip point. A reduced thermal speed limit commands deceleration
+instead of instantly clipping away momentum. Crossing the destination distance
+at significant speed is labeled a fly-through, not a completed rendezvous.
+The interstellar path is a radial distance surrogate, not a 3D stellar intercept.
+
+Increasing an isolated onboard magnetic field cannot remove net spacecraft
+momentum. An external plasma interaction can exchange momentum, so a separate
+classical diagnostic estimates F ≤ min(2ρv², B²/(2μ₀)) A. It yields zero in
+vacuum/zero field and is excluded above 0.1c. It is an optimistic pressure bound,
+not a validated magnetic-sail model, and supplies no flight braking credit.
+The existing classical MHD shield closure also remains unvalidated near c.
+
+Sources: [JPL planetary elements](https://ssd.jpl.nasa.gov/planets/approx_pos.html),
+[NASA electric propulsion](https://www.nasa.gov/space-technology-mission-directorate/tdm/solar-electric-propulsion/),
+[NASA Alpha Centauri distances](https://science.nasa.gov/sun/facts/),
+[NASA relativity](https://science.nasa.gov/learn/basics-of-space-flight/chapter3-2/),
+[NASA external-plasma momentum exchange](https://www.nasa.gov/technology/space-travel-tech/nasa-begins-testing-of-revolutionary-e-sail-technology/).
+
+The UI borrows muted elevated surfaces, compact monospaced telemetry, and
+origin/destination controls from `reference/port`; no framework/assets/install
+from that reference is required. Obsolete generated equivalents, duplicate
+schematics, and the former secondary generator were removed from the root.
