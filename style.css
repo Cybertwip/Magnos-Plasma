@@ -24,6 +24,96 @@ button, input, select { font: inherit; }
   padding: 18px;
 }
 
+.stage-shell {
+  width: 100%;
+  max-width: none;
+  padding: 10px 12px 12px;
+}
+
+.stage-topbar {
+  padding: 2px 4px 10px;
+}
+
+.stage-topbar h1 {
+  font-size: clamp(18px, 2.2vw, 28px);
+}
+
+.stage-viewport {
+  border-radius: 16px;
+}
+
+.stage-viewport .viewport {
+  min-height: calc(100vh - 78px);
+  height: calc(100vh - 78px);
+}
+
+.flight-card {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: min(280px, calc(100% - 24px));
+  padding: 12px 14px;
+  border: 1px solid rgba(108, 137, 174, .34);
+  border-radius: 12px;
+  background: rgba(5, 10, 17, .78);
+  backdrop-filter: blur(10px);
+  pointer-events: none;
+}
+
+.flight-card .badge { float: right; }
+.flight-card p {
+  margin: 8px 0 10px;
+  color: #f4f8ff;
+  font-size: 13px;
+  font-weight: 700;
+  line-height: 1.35;
+}
+.flight-card dl { margin: 0; }
+.flight-card div {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 5px 0;
+  border-bottom: 1px solid rgba(255,255,255,.06);
+}
+.flight-card dt { color: var(--muted); font-size: 11px; }
+.flight-card dd {
+  margin: 0;
+  color: #f3f7fc;
+  text-align: right;
+  font-size: 11px;
+  font-weight: 700;
+  max-width: 62%;
+}
+
+.stage-controls {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 12px;
+  display: grid;
+  grid-template-columns: minmax(180px, 1fr) minmax(140px, 220px);
+  gap: 10px;
+  pointer-events: none;
+}
+
+.stage-control {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid rgba(108, 137, 174, .34);
+  border-radius: 12px;
+  background: rgba(5, 10, 17, .78);
+  backdrop-filter: blur(10px);
+  pointer-events: auto;
+  color: #c8d5e6;
+  font-size: 11px;
+}
+
+.stage-control span { display: flex; justify-content: space-between; gap: 8px; }
+.stage-control strong { color: #fff; font-variant-numeric: tabular-nums; }
+.stage-control select { min-height: 34px; }
+
 .topbar {
   display: flex;
   justify-content: space-between;
@@ -202,7 +292,10 @@ footer { padding: 12px 4px 0; color: #65758b; font-size: 10px; line-height: 1.4;
   .workspace { grid-template-columns: 1fr; }
   .viewport-card { order: -1; }
   .viewport { min-height: 520px; height: 66vh; }
-  .mission-clocks { grid-template-columns: 1fr; }
+  .stage-viewport .viewport { min-height: calc(100vh - 108px); height: calc(100vh - 108px); }
+  .mission-clocks { grid-template-columns: 1fr; right: auto; width: min(280px, calc(100% - 24px)); }
+  .flight-card { top: auto; bottom: 118px; }
+  .stage-controls { grid-template-columns: 1fr; }
   .mission-clock { padding: 8px 10px; }
   .mission-clock strong { font-size: 13px; }
   .telemetry { grid-template-columns: 1fr; }

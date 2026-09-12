@@ -1335,7 +1335,7 @@ function launchRocket() {
     ? `Earth → ${plan.route[0]} · strongest reachable gain ${formatNumber(plan.totalFlybyEnergyGainJkg / 1e6, 1)} MJ/kg · replan after flyby`
     : "No reachable positive-gain assist · outbound escape";
   assistGainStat.textContent = `${formatNumber(plan.totalEnergyGainJkg / 1e6, 1)} MJ/kg · plasma Δv ${formatNumber(plan.totalPoweredDeltaV / 1000, 1)} km/s`;
-  setFocus("Rocket", 5.5);
+  setFocus("Rocket", 8);
   rebuildRocketTrail();
 }
 
@@ -1385,7 +1385,7 @@ function initializeCruiseProfile() {
 
   if (!rocket.autoCruiseViewSet && solarDistance >= INTERSTELLAR_VIEW_AU * AU) {
     rocket.autoCruiseViewSet = true;
-    setFocus("Cruise overview");
+    setFocus("Rocket", 10);
   }
 
   const drive = steadyPlasmaDrive(plasmaThrottleCommand(), rocket.thermalDerate ?? 1);
@@ -1761,14 +1761,18 @@ const labelsLayer = document.getElementById("labels");
 const scene = new THREE.Scene();
 scene.fog = new THREE.FogExp2(0x020407, 0.00014);
 
-const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
+renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 3));
 renderer.outputColorSpace = THREE.SRGBColorSpace;
+renderer.toneMapping = 4; // ACESFilmic
+renderer.toneMappingExposure = 1.12;
 
 const camera = new THREE.PerspectiveCamera(48, 1, 0.01, 10_000);
-const ambient = new THREE.AmbientLight(0x55708f, 0.16);
+const ambient = new THREE.AmbientLight(0x6b82a0, 0.08);
 scene.add(ambient);
-const solarLight = new THREE.PointLight(0xfff1c7, 5.2, 0, 1.2);
+const skyFill = new THREE.HemisphereLight(0xb7d4ff, 0x1a140c, 0.28);
+scene.add(skyFill);
+const solarLight = new THREE.PointLight(0xfff3d0, 9.5, 0, 1.05);
 scene.add(solarLight);
 
 const barycenterGroup = new THREE.Group();
@@ -1788,7 +1792,28 @@ addBarycenterAxis(new THREE.Vector3(0, -0.35, 0), new THREE.Vector3(0, 0.35, 0))
 addBarycenterAxis(new THREE.Vector3(0, 0, -0.35), new THREE.Vector3(0, 0, 0.35));
 scene.add(barycenterGroup);
 
-function stars(){const g=new THREE.BufferGeometry(),n=2600,a=new Float32Array(n*3);for(let i=0;i<n;i++){const r=700+Math.random()*7000,u=Math.random()*2-1,th=Math.random()*Math.PI*2,s=Math.sqrt(1-u*u);a[i*3]=r*s*Math.cos(th);a[i*3+1]=r*u;a[i*3+2]=r*s*Math.sin(th)}g.setAttribute("position",new THREE.BufferAttribute(a,3));scene.add(new THREE.Points(g,new THREE.PointsMaterial({color:0x9fb0c6,size:1.1,sizeAttenuation:false,transparent:true,opacity:.72})))}
+function stars() {
+  const g = new THREE.BufferGeometry();
+  const n = 5200;
+  const a = new Float32Array(n * 3);
+  for (let i = 0; i < n; i++) {
+    const r = 800 + Math.random() * 8200;
+    const u = Math.random() * 2 - 1;
+    const th = Math.random() * Math.PI * 2;
+    const s = Math.sqrt(1 - u * u);
+    a[i * 3] = r * s * Math.cos(th);
+    a[i * 3 + 1] = r * u;
+    a[i * 3 + 2] = r * s * Math.sin(th);
+  }
+  g.setAttribute("position", new THREE.BufferAttribute(a, 3));
+  scene.add(new THREE.Points(g, new THREE.PointsMaterial({
+    color: 0xc5d4ea,
+    size: 1.35,
+    sizeAttenuation: false,
+    transparent: true,
+    opacity: 0.82,
+  })));
+}
 stars();
 
 const alphaGroup = new THREE.Group();
@@ -1803,22 +1828,22 @@ interstellarRouteLine.visible = false;
 scene.add(interstellarRouteLine);
 
 const alphaA = new THREE.Mesh(
-  new THREE.SphereGeometry(0.95, 28, 18),
-  new THREE.MeshBasicMaterial({ color: 0xffe1a0 }),
+  new THREE.SphereGeometry(0.95, 64, 48),
+  new THREE.MeshStandardMaterial({ color: 0xffe1a0, emissive: 0xffc56a, emissiveIntensity: 1.4, roughness: 0.3 }),
 );
 alphaA.position.set(-0.75, 0.16, 0);
 alphaGroup.add(alphaA);
 
 const alphaB = new THREE.Mesh(
-  new THREE.SphereGeometry(0.72, 28, 18),
-  new THREE.MeshBasicMaterial({ color: 0xffc878 }),
+  new THREE.SphereGeometry(0.72, 64, 48),
+  new THREE.MeshStandardMaterial({ color: 0xffc878, emissive: 0xffa24a, emissiveIntensity: 1.2, roughness: 0.32 }),
 );
 alphaB.position.set(0.70, -0.16, 0.15);
 alphaGroup.add(alphaB);
 
 const proximaStar = new THREE.Mesh(
-  new THREE.SphereGeometry(0.40, 24, 16),
-  new THREE.MeshBasicMaterial({ color: 0xff6f5f }),
+  new THREE.SphereGeometry(0.40, 48, 32),
+  new THREE.MeshStandardMaterial({ color: 0xff6f5f, emissive: 0xff3b2a, emissiveIntensity: 1.3, roughness: 0.35 }),
 );
 proximaStar.position.set(2.05, 0.58, -0.32);
 alphaGroup.add(proximaStar);
@@ -1858,34 +1883,55 @@ let rocketTrailPoints = [];
 let lastRocketTrailSampleTime = -Infinity;
 
 function bodyVisualRadius(body) {
-  if (body.name === "Sol") return 0.34;
-  if (body.name === "Jupiter") return 0.20;
-  if (body.name === "Saturn") return 0.18;
-  if (body.name === "Uranus" || body.name === "Neptune") return 0.145;
-  return 0.095;
+  if (body.name === "Sol") return 0.92;
+  if (body.name === "Jupiter") return 0.58;
+  if (body.name === "Saturn") return 0.50;
+  if (body.name === "Uranus" || body.name === "Neptune") return 0.38;
+  if (body.name === "Earth" || body.name === "Venus") return 0.26;
+  if (body.name === "Mars") return 0.20;
+  return 0.16;
 }
 
 function makeBodyVisual(body) {
-  const geometry = new THREE.SphereGeometry(bodyVisualRadius(body), 32, 20);
+  const radius = bodyVisualRadius(body);
+  const geometry = new THREE.SphereGeometry(radius, 96, 64);
+  const gasGiant = body.name === "Jupiter" || body.name === "Saturn" || body.name === "Uranus" || body.name === "Neptune";
   const material = body.name === "Sol"
-    ? new THREE.MeshBasicMaterial({ color: body.color })
-    : new THREE.MeshStandardMaterial({ color: body.color, roughness: 0.82, metalness: 0.02 });
+    ? new THREE.MeshStandardMaterial({
+      color: body.color,
+      emissive: body.color,
+      emissiveIntensity: 2.1,
+      roughness: 0.28,
+      metalness: 0,
+    })
+    : new THREE.MeshStandardMaterial({
+      color: body.color,
+      roughness: gasGiant ? 0.38 : 0.52,
+      metalness: gasGiant ? 0.16 : 0.05,
+    });
 
   const mesh = new THREE.Mesh(geometry, material);
   scene.add(mesh);
 
   if (body.name === "Sol") {
     const glow = new THREE.Mesh(
-      new THREE.SphereGeometry(0.46, 24, 16),
-      new THREE.MeshBasicMaterial({ color: 0xffa94a, transparent: true, opacity: 0.08, side: THREE_BACK_SIDE }),
+      new THREE.SphereGeometry(radius * 1.38, 64, 40),
+      new THREE.MeshBasicMaterial({ color: 0xffb45c, transparent: true, opacity: 0.11, side: THREE_BACK_SIDE }),
     );
     mesh.add(glow);
   }
 
   if (body.name === "Saturn") {
     const ring = new THREE.Mesh(
-      new THREE.RingGeometry(0.24, 0.38, 72),
-      new THREE.MeshBasicMaterial({ color: 0xb9aa7d, transparent: true, opacity: 0.65, side: THREE_DOUBLE_SIDE }),
+      new THREE.RingGeometry(radius * 1.22, radius * 1.95, 128),
+      new THREE.MeshStandardMaterial({
+        color: 0xc4b48a,
+        roughness: 0.62,
+        metalness: 0.08,
+        transparent: true,
+        opacity: 0.78,
+        side: THREE_DOUBLE_SIDE,
+      }),
     );
     ring.rotation.x = Math.PI / 2.25;
     mesh.add(ring);
@@ -1915,11 +1961,11 @@ function makeRocket() {
   const dark = new THREE.MeshStandardMaterial({ color: 0x303b49, roughness: 0.62 });
   const accent = new THREE.MeshStandardMaterial({ color: 0xffd35a, emissive: 0x4d3200, emissiveIntensity: 0.5 });
 
-  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.095, 0.54, 14), white);
+  const body = new THREE.Mesh(new THREE.CylinderGeometry(0.075, 0.095, 0.54, 32), white);
   body.position.y = 0.03;
   group.add(body);
 
-  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.076, 0.22, 14), white);
+  const nose = new THREE.Mesh(new THREE.ConeGeometry(0.076, 0.22, 32), white);
   nose.position.y = 0.41;
   group.add(nose);
 
@@ -1931,7 +1977,7 @@ function makeRocket() {
     roughness: 0.34,
     metalness: 0.58,
   });
-  const heatShield = new THREE.Mesh(new THREE.SphereGeometry(0.13, 20, 12), shieldMaterial);
+  const heatShield = new THREE.Mesh(new THREE.SphereGeometry(0.13, 48, 32), shieldMaterial);
   heatShield.scale.set(1.45, 0.18, 1.45);
   heatShield.position.y = 0.545;
   heatShield.name = "heatShield";
@@ -2031,7 +2077,7 @@ function sampleTrails() {
 let cameraFocusName = "Earth";
 let cameraYaw = 0.78;
 let cameraPitch = 0.40;
-let cameraDistance = 22;
+let cameraDistance = 30;
 let dragging = false;
 let lastPointerX = 0;
 let lastPointerY = 0;
@@ -2049,7 +2095,9 @@ function focusRenderPosition() {
 
 function setFocus(name, distance = null) {
   cameraFocusName = name;
-  focusSelect.value = name;
+  if (focusSelect && [...focusSelect.options].some(option => option.value === name)) {
+    focusSelect.value = name;
+  }
   if (distance !== null) cameraDistance = distance;
 }
 
@@ -2584,7 +2632,7 @@ playButton.addEventListener("click", () => {
 
 resetButton.addEventListener("click", () => {
   resetSimulation(new Date());
-  setFocus("Earth", 22);
+  setFocus("Earth", 28);
 });
 
 launchButton.addEventListener("click", launchRocket);
@@ -2604,11 +2652,10 @@ focusSelect.addEventListener("change", () => {
     return;
   }
   const suggestedDistance = target === "Barycenter" ? 180
-    : target === "Jupiter" ? 38
-      : target === "Rocket" ? 5.5
-        : target === "Alpha Centauri" ? 12
-          : target === "Cruise overview" ? null
-            : 22;
+    : target === "Jupiter" ? 52
+      : target === "Rocket" ? 8
+        : target === "Sol" ? 18
+          : 30;
   setFocus(target, suggestedDistance);
 });
 
