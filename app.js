@@ -1186,6 +1186,7 @@ function beginArcLeg(targetName) {
     arrivalDate:new Date(currentDate().getTime() + encounter.transferDuration * 1000),
     encounterOffset:encounter.encounterOffset.clone(), plasmaDeltaVApplied:0,
     poweredBurnSeconds:0, nextGuidance:0, guidanceDeltaV:encounter.solution.v1.clone().add(getBody("Sol").velocity).sub(rocket.velocity), phase:"Departure burn"};
+  if(typeof updateRoutePreview==="function") updateRoutePreview(rocket.plan);
   rocketStateStat.textContent = `${encounter.method} → ${targetName} · departure burn`;
 }
 
@@ -1456,7 +1457,7 @@ function launchRocket() {
     encountersCompleted: 0,
     replans: 0,
     plannedRouteHistory: [...plan.route],
-    modeledHeliocentricSpeed: approximatePlanetOrbitalSpeed("Earth") + plan.launchExcessMps,
+    modeledHeliocentricSpeed: approximatePlanetOrbitalSpeed(route.origin) + plan.launchExcessMps,
     lastEncounterName: route.origin,
     visitedPlanets: [route.origin],
     oberthBurned: false,
@@ -1946,7 +1947,7 @@ scene.add(plannedRouteLine);
 function updateRoutePreview(plan=null) {
   if(!plan && rocket?.active) return;
   const route=selectedRoute();
-  if(!plan && route.target!=="auto" && route.origin!==route.target) plan=poweredRoutePlan(route.origin,route.target);
+  if(!plan && route.target!=="auto" && route.origin!==route.target) plan=poweredRoutePlan(route.origin,route.target,rocket?.lockedTo ? rocket : null);
   const arc=plan?.encounters[0]?.arc;
   plannedRouteLine.visible=Boolean(arc);
   if(arc) {
@@ -2824,7 +2825,7 @@ function updateMissionSummary() {
   document.getElementById("launchButton").disabled=Boolean(rocket?.active);
   document.getElementById("engineBankStat").textContent=`${engineCount()} × ${formatVoltage(voltageCeiling())} ceiling`;
   const bank=magnosBoosterForPlasma();
-  document.getElementById("bankSummary").textContent=`${bank.count} Magnos · ${bank.availableW.toFixed(0)} W shared output budget · target ${formatVoltage(bank.targetV)}. Drive source: hypothetical ${formatPower(drive.acceleratorPowerW)}; shared thermal limit.`;
+  document.getElementById("bankSummary").textContent=`${bank.count} Magnos · ${bank.availableW.toFixed(2)} W shared output budget · target ${formatVoltage(bank.targetV)}. Drive source: hypothetical ${formatPower(drive.acceleratorPowerW)}; shared thermal limit.`;
   const leg=rocket?.leg?.encounter;
   document.getElementById("routeComparison").textContent=leg ? `${leg.method} · ${(leg.transferDuration/DAY).toFixed(1)} d · plasma Δv ${(leg.poweredDeltaV/1000).toFixed(1)} km/s · Hohmann baseline ${(leg.naturalTime/DAY).toFixed(1)} d (different arrival phase)` : "Tangent-matched plasma arcs · acceleration and braking included";
   const brake=magneticBrake({densityKgM3:INTERSTELLAR_NUMBER_DENSITY_M3*PROTON_MASS_KG,speed:rocket?.modeledHeliocentricSpeed||0,areaM2:SHIELD_AREA_M2,fieldT:rocket?.coilFieldT||0});

@@ -71,7 +71,7 @@ with tempfile.TemporaryDirectory() as temp:
                 channel, driver_pin, actual.get(('U' + channel, driver_pin)), actual.get(('J' + channel, load_pin))
             )
             assert actual[(load, '1')] != actual[(load, '2')], 'load must not be shorted'
-print('PASS: physical driver-to-feedthrough continuity with labels removed; no load shorts')
+print('PASS: ALL labels removed: every net physically connected, no merged nets or load shorts')
 
 # Every CAD conductor must terminate on two actual pins on the same KiCad net.
 for group,filename in [('boxWires','magnos-plasma.scad'),('harness','magnos-engine.scad')]:
@@ -103,3 +103,15 @@ for net in spec['nets']:
             if w['net']==net['name'] and (a in reached or b in reached):reached.update([a,b])
     assert reached==members,net['name']
 print('PASS: CAD pin/net parity, full box connectivity, 19 external wires, sensor returns, isolated booster cascade')
+
+# The adapter may attach to original ports, but must not alter beta topology.
+with tempfile.TemporaryDirectory() as temp:
+    original_xml=Path(temp)/'beta.xml'
+    subprocess.run([cli,'sch','export','netlist','--format','kicadxml',str(root/spec['source']),'-o',str(original_xml)],check=True,capture_output=True)
+    original=ET.parse(original_xml)
+    original_refs={c.get('ref') for c in original.findall('./components/comp')}
+    expected={frozenset((p.get('ref'),p.get('pin')) for p in n.findall('node')) for n in original.findall('./nets/net')}
+    actual_groups={frozenset((p.get('ref'),p.get('pin')) for p in n.findall('node') if p.get('ref') in original_refs) for n in tree.findall('./nets/net')}
+    actual_groups.discard(frozenset())
+    assert actual_groups==expected,'source beta net topology changed'
+print('PASS: original beta topology preserved')

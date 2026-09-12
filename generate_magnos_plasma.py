@@ -3,8 +3,8 @@
 
 Added power, protection, rectifier, coil, electrode, valve and
 neutralizer blocks are placed on the 1.27 mm KiCad grid and connected
-with copper (rails, junctions, Manhattan wires). Net labels remain only
-where this sheet must join the original beta connectors.
+with explicit segmented rails. Labels identify nets; all-labels-removed
+netlist verification proves actual wire continuity.
 Power converters / interlocks are functional blocks, not designed PCBs.
 """
 from pathlib import Path

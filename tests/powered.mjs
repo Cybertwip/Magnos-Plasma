@@ -77,3 +77,9 @@ assert.ok(rocket.assistPlasmaDeltaV>0);
 console.log('Powered flyby',flybyPlan.route[0],(flybyPlan.totalTransferDuration/DAY).toFixed(2)+' days',rocket.plan.route);
 `,context);
 console.log('PASS: arc derivatives, capped cascade power, magnetic momentum exchange, relativistic clocks and integrated powered rendezvous');
+
+context.document={getElementById:id=>({value:({radiatorTarget:600,engineCountSlider:1,plasmaVoltageSlider:10,voltageScale:1e6})[id]})};
+vm.runInContext('globalThis.coolPower=steadyPlasmaDrive().acceleratorPowerW;',context);
+context.document={getElementById:id=>({value:({radiatorTarget:1216,engineCountSlider:8,plasmaVoltageSlider:10,voltageScale:1e12})[id]})};
+vm.runInContext(`assert.ok(steadyPlasmaDrive().acceleratorPowerW>coolPower*10);assert.ok(steadyPlasmaDrive().acceleratorPowerW<=thermalElectricalPowerLimitW(COIL_CURRENT_LIMIT_A)*(1+1e-12));`,context);
+console.log('PASS: colder radiator reduces power; eight TV engines share thermal budget');
