@@ -58,3 +58,10 @@ dt,dd { font:11px/1.5 ui-monospace,monospace; } dt { color:var(--muted); } dd { 
 @media(prefers-reduced-motion:reduce) { * { transition:none!important; } }
 
 .thermal-setting { margin-top:14px; }
+
+@media(max-width:700px) {
+ .viewport { height:auto; }
+ #sceneCanvas { position:relative; margin-top:120px; height:300px; }
+ .labels-layer { top:120px; height:300px; }
+ .route-card,.flight-card,.stage-controls { position:relative; top:auto; bottom:auto; left:auto; right:auto; width:auto; margin:10px; }
+}

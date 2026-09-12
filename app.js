@@ -1786,29 +1786,29 @@ function applyCruisePropulsion(dt) {
   );
   if (!rocket.cruiseActive && startCruise) initializeCruiseProfile();
 
-  const drive = updatePlasmaCircuit(dt, Boolean(rocket.cruiseActive && rocket.escaped));
+  const drive = updatePlasmaCircuit(dt, Boolean(rocket.cruiseActive));
   if (!rocket.cruiseActive || !(drive.properAcceleration > 0)) return;
 
   const relativeVelocity = rocket.velocity.clone().sub(sun.velocity);
   const speed = relativeVelocity.length();
   if (speed < 1) return;
 
-  if (brakeToggle.checked && solarDistance >= rocket.brakeStartDistance) {
+  if (brakeToggle.checked && (solarDistance >= rocket.brakeStartDistance || ALPHA_TARGET_DISTANCE_M-solarDistance <= (lorentzGamma(speed)-1)*C*C/drive.properAcceleration+speed*dt)) {
     rocket.cruiseBrake = true;
   }
 
   const direction = relativeVelocity.normalize();
   const gamma = lorentzGamma(speed);
-  const coordinateAcceleration = drive.properAcceleration / (gamma ** 3);
-  const deltaSpeed = coordinateAcceleration * dt;
   const relativisticCeiling = 0.999999999 * C;
-  const shieldCeiling = rocket.shieldSpeedLimitMps > 0
-    ? rocket.shieldSpeedLimitMps
-    : relativisticCeiling;
+  const shieldCeiling = rocket.shieldSpeedLimitMps > 0 ? rocket.shieldSpeedLimitMps : relativisticCeiling;
   const maximumSpeed = Math.min(relativisticCeiling, shieldCeiling);
-  const updatedSpeed = rocket.cruiseBrake
-    ? Math.max(0, speed - deltaSpeed)
-    : Math.min(maximumSpeed, speed + deltaSpeed);
+  const decelerating=rocket.cruiseBrake || speed>maximumSpeed;
+  const properVelocity=gamma*speed;
+  let updatedProperVelocity=Math.max(0,properVelocity+(decelerating ? -1 : 1)*drive.properAcceleration*dt);
+  if(!decelerating) updatedProperVelocity=Math.min(updatedProperVelocity,lorentzGamma(maximumSpeed)*maximumSpeed);
+  const updatedSpeed=C*updatedProperVelocity/Math.hypot(C,updatedProperVelocity);
+  // A falling thermal/shield limit commands retro-thrust; it never deletes
+  // momentum by instantly clipping a pre-existing velocity.
 
   rocket.velocity.copy(sun.velocity).addScaledVector(direction, updatedSpeed);
   rocket.peakSpeed = Math.max(rocket.peakSpeed, updatedSpeed);
@@ -1865,7 +1865,8 @@ function updateRocketAfterStep() {
     if (solarDistance >= ALPHA_CENTAURI_DISTANCE_LY * LY_M) {
       rocket.reachedAlpha = true;
       rocket.active = false;
-      rocketStateStat.textContent = "ARRIVED · Alpha Centauri transfer complete";
+      const arrivalSpeed=rocket.velocity.clone().sub(sun.velocity).length();
+      rocketStateStat.textContent = arrivalSpeed<1000 ? "Alpha Centauri distance reached · low-speed arrival" : `Alpha Centauri distance crossed · fly-through at ${formatSpeed(arrivalSpeed)}`;
     } else if (rocket.cruiseActive) {
       const phase = rocket.cruiseBrake ? "braking" : "accelerating";
       rocketStateStat.textContent = `Plasma interstellar cruise · ${phase} · ${(rocket.plasmaProperAcceleration / EARTH_G0).toFixed(3)} g`;
@@ -2359,7 +2360,7 @@ function updateLabel(element, worldPosition, visible) {
     return;
   }
 
-  const rect = viewport.getBoundingClientRect();
+  const rect = canvas.getBoundingClientRect();
   element.style.display = "block";
   element.style.left = `${(projected.x * 0.5 + 0.5) * rect.width}px`;
   element.style.top = `${(-projected.y * 0.5 + 0.5) * rect.height}px`;
@@ -2738,8 +2739,8 @@ function updateTelemetry() {
 }
 
 function resizeRenderer() {
-  const width = viewport.clientWidth;
-  const height = viewport.clientHeight;
+  const width = canvas.clientWidth;
+  const height = canvas.clientHeight;
   renderer.setSize(width, height, false);
   camera.aspect = width / Math.max(height, 1);
   camera.updateProjectionMatrix();
