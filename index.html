@@ -103,7 +103,8 @@
           <input id="magnosGain" type="number" min="1" max="6000" step="1" value="1">
           <label for="magnosLoad">Equivalent output load</label>
           <select id="magnosLoad">
-            <option value="1000000000">1 GΩ</option>
+            <option value="plasma" selected>Plasma coil + electrodes</option>
+            <option value="1000000000">1 GΩ (open)</option>
             <option value="1000000">1 MΩ</option>
             <option value="1000">1 kΩ</option>
           </select>
@@ -112,7 +113,7 @@
             <div><dt>Output</dt><dd id="magnosOutput">—</dd></div>
             <div><dt>Status</dt><dd id="magnosStatus">—</dd></div>
           </dl>
-          <p class="muted tiny">This envelope does not power the simulated plasma drive. <a href="magnos_beta_booster.kicad_sch" download>Reference circuit</a></p>
+          <p class="muted tiny">J3 AC and J4 DC feed the plasma coil drivers, electrode supplies and shield. The source 5 V / 1 A annotation is the booster ceiling. <a href="magnos-plasma.kicad_sch" download>System schematic</a></p>
         </section>
 
         <section class="drive-readout">

@@ -3,6 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.mjs';
 import {solveLambert, gravityAssist, hohmannTime} from '../transfer-planner.mjs';
+import {magnosBooster} from '../magnos-booster.mjs';
 // Independently integrate Lambert endpoint velocities with RK4, normalized units.
 function propagate(r,v,t) {
   r=r.clone();v=v.clone();const dt=t/4000;
@@ -29,7 +30,7 @@ const assist=gravityAssist(incoming,pv,1.2669e17,7.2e7);
 assert.ok(Math.abs(assist.velocity.clone().sub(pv).length()-incoming.clone().sub(pv).length())<1e-8);
 assert.ok(assist.energyGainJkg>0);
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const context=vm.createContext({THREE,assert,console,solveLambert,gravityAssist,hohmannTime});
+const context=vm.createContext({THREE,assert,console,solveLambert,gravityAssist,hohmannTime,magnosBooster});
 vm.runInContext(source.slice(0,source.indexOf('const viewport =')).replace(/^import .*;$/gm,''),context);
 vm.runInContext(`
 const cruiseThrustSlider={value:100}, injectionSlider={value:3.2}, flybySlider={value:500}, periSlider={value:4};
@@ -56,7 +57,9 @@ assert.equal(rocket.encountersCompleted,1,'actual sphere-of-influence encounter 
 assert.ok(rocket.routeFlybyEnergyGainJkg>0);
 assert.ok(rocket.assistPlasmaDeltaV>0 && burns>0 && coasts>0);
 assert.ok(rocket.shieldMagneticFieldT>0,'shield field available in transfers');
+assert.ok(rocket.minimumSolarDistance > 0.8 * AU, 'planetary legs must not dive at the Sun');
 assert.ok(rocket.plan.route.every(n=>!rocket.visitedPlanets.includes(n)),'no repeat targets');
+assert.equal(interstellarViewActive(), false, 'solar-system legs stay in solar-system view');
 console.log('Flight:',targetName,'->',rocket.plan.route,'burn steps:',burns,'coast steps:',coasts,'actual gain MJ/kg:',rocket.routeFlybyEnergyGainJkg/1e6);
 `,context);
 console.log('PASS: Lambert RK4 endpoints, Hohmann limit, flyby conservation, best-route selection, powered live encounter and no repeats');

@@ -55,7 +55,7 @@ def q(s):
 
 
 def uid(s):
-    return str(uuid.uuid5(uuid.NAMESPACE_URL, 'magnos-plasma/' + s))
+    return '"' + str(uuid.uuid5(uuid.NAMESPACE_URL, 'magnos-plasma/' + s)) + '"'
 
 
 def expr(s):
@@ -71,11 +71,13 @@ root_id = child(root, 'uuid')[1].strip('"')
 
 # Pin-coordinate convention verified against KiCad 9 netlist: a pin at
 # (px, py) on a rotation-0 instance at (x, y) connects at (x + px, y - py).
+# Do not place net names on the Magnos pin bodies; stub off the legs first.
 port_map = {
     'J1': ['INPUT_5V', 'INPUT_RETURN'],
     'J3': ['BOOST_AC_A', 'BOOST_AC_B'],
     'J4': ['BOOST_DC_P', 'BOOST_DC_N'],
 }
+beta_pins = {}
 for sym in children(root, 'symbol'):
     ref = next(x[2].strip('"') for x in children(sym, 'property') if x[1] == '"Reference"')
     if ref not in port_map:
@@ -92,41 +94,40 @@ for sym in children(root, 'symbol'):
         a = math.radians(angle)
         px = x + dx * math.cos(a) - dy * math.sin(a)
         py = y - dx * math.sin(a) - dy * math.cos(a)
-        root.append(expr(f'(label {q(net)} (at {px:.4f} {py:.4f} 0) {fx} (uuid {uid("beta-"+net)}))'))
+        beta_pins[net] = (round(px, 2), round(py, 2), round(x, 2), round(y, 2))
 
 blocks = []
 pins = {}          # (ref, number) -> (x, y)
 net_pins = {}      # net -> [(ref, number, x, y)]
-_seq = 0
-
-
-def seq(prefix):
-    global _seq
-    _seq += 1
-    return f'{prefix}{_seq}'
 
 
 def world(x, y, px, py):
     return (round(x + px, 2), round(y - py, 2))
 
 
+def xy(p):
+    return f'{p[0]:.2f} {p[1]:.2f}'
+
+
 def wire(a, b, key):
     if a == b:
         return
     root.append(expr(
-        f'(wire (pts (xy {a[0]} {a[1]}) (xy {b[0]} {b[1]})) '
+        f'(wire (pts (xy {xy(a)}) (xy {xy(b)})) '
         f'(stroke (width 0) (type default)) (uuid {uid(key)}))'
     ))
 
 
 def junction(p, key):
     root.append(expr(
-        f'(junction (at {p[0]} {p[1]}) (diameter 0) (color 0 0 0 0) (uuid {uid(key)}))'
+        f'(junction (at {xy(p)}) (diameter 0) (color 0 0 0 0) (uuid {uid(key)}))'
     ))
 
 
-def label_at(net, p, key):
-    root.append(expr(f'(label {q(net)} (at {p[0]} {p[1]} 0) {fx} (uuid {uid(key)}))'))
+def label_at(net, p, key, angle=0):
+    justify = '(justify right)' if int(angle) == 180 else ''
+    effects = f'(effects (font (size 1.27 1.27)) {justify})' if justify else fx
+    root.append(expr(f'(label {q(net)} (at {xy(p)} {int(angle)}) {effects} (uuid {uid(key)}))'))
 
 
 def note(text, x, y):
@@ -142,7 +143,7 @@ def manhattan(a, b, key, via='h'):
     wire(mid, b, key + 'b')
 
 
-def block(ref, value, spec, x, y):
+def block(ref, value, spec, x, y, hide_leg_text=False):
     """spec: list of (name, net, side) with side in {'L','R'}."""
     key = f'MagnosSystem:{ref}'
     left = [(i, n, net) for i, (n, net, side) in enumerate(spec) if side == 'L']
@@ -152,6 +153,7 @@ def block(ref, value, spec, x, y):
     body_hx = grid(8)
     pin_x = grid(10)
     pin_len = grid(2)
+    names = '(pin_names (offset 0.7) hide)' if hide_leg_text else '(pin_names (offset 0.7))'
 
     def column(entries):
         if not entries:
@@ -171,7 +173,7 @@ def block(ref, value, spec, x, y):
         placed.append((idx + 1, name, net, pin_x, py, 0))
 
     symbol = (
-        f'(symbol {q(key)} (pin_names (offset 0.7)) (in_bom yes) (on_board yes) '
+        f'(symbol {q(key)} {names} (in_bom yes) (on_board yes) '
         f'(property "Reference" {q(ref)} (at 0 {body_hy + grid(2)} 0) {fx}) '
         f'(property "Value" {q(value)} (at 0 {-body_hy - grid(2)} 0) {fx}) '
         f'(symbol {q(ref + "_0_1")} (rectangle (start {-body_hx} {body_hy}) '
@@ -180,26 +182,26 @@ def block(ref, value, spec, x, y):
     )
     for num, name, net, px, py, angle in placed:
         symbol += (
-            f'(pin passive line (at {px} {py} {angle}) (length {pin_len}) '
+            f'(pin passive line (at {px:.2f} {py:.2f} {angle}) (length {pin_len:.2f}) '
             f'(name {q(name)} {fx}) (number "{num}" {fx}))'
         )
     symbol += '))'
     lib.append(expr(symbol))
     root.append(expr(
-        f'(symbol (lib_id {q(key)}) (at {x} {y} 0) (unit 1) (in_bom yes) (on_board yes) '
+        f'(symbol (lib_id {q(key)}) (at {x:.2f} {y:.2f} 0) (unit 1) (in_bom yes) (on_board yes) '
         f'(dnp no) (uuid {uid(ref)}) (property "Reference" {q(ref)} '
-        f'(at {x} {y - body_hy - grid(2)} 0) {fx}) (property "Value" {q(value)} '
-        f'(at {x} {y + body_hy + grid(2)} 0) {fx}) (instances (project "magnos-plasma" '
+        f'(at {x:.2f} {y - body_hy - grid(2):.2f} 0) {fx}) (property "Value" {q(value)} '
+        f'(at {x:.2f} {y + body_hy + grid(2):.2f} 0) {fx}) (instances (project "magnos-plasma" '
         f'(path "/{root_id}" (reference {q(ref)}) (unit 1)))))'
     ))
     for num, name, net, px, py, angle in placed:
         wx, wy = world(x, y, px, py)
         pins[(ref, str(num))] = (wx, wy)
         net_pins.setdefault(net, []).append((ref, str(num), wx, wy))
-        dx = -grid(4) if px < 0 else grid(4)
-        end = (wx + dx, wy)
+        outward = -1 if px < 0 else 1
+        end = (round(wx + outward * grid(8), 2), wy)
         wire((wx, wy), end, ref + str(num) + 'stub')
-        label_at(net, end, ref + str(num) + 'net')
+        label_at(net, end, ref + str(num) + 'net', 180 if px < 0 else 0)
     blocks.append({
         'reference': ref,
         'value': value,
@@ -208,52 +210,17 @@ def block(ref, value, spec, x, y):
 
 
 def two(ref, value, a, b, x, y):
-    block(ref, value, [('1', a, 'L'), ('2', b, 'R')], x, y)
+    block(ref, value, [('1', a, 'L'), ('2', b, 'R')], x, y, hide_leg_text=True)
 
 
 def diode(ref, value, anode, cathode, x, y):
-    block(ref, value, [('A', anode, 'L'), ('K', cathode, 'R')], x, y)
-
-
-def rail(net, y, refs=None, extra=(), label=True):
-    """Horizontal copper through pins on `net`. Optional ref filter keeps rails local."""
-    pts = [(p[2], p[3]) for p in net_pins.get(net, []) if refs is None or p[0] in refs]
-    pts.extend(extra)
-    if not pts:
-        return
-    xs = [p[0] for p in pts]
-    x0, x1 = min(xs), max(xs)
-    if x1 - x0 < grid(2):
-        x0 -= grid(4)
-        x1 += grid(4)
-    wire((x0, y), (x1, y), net + f'rail{y}')
-    seen = set()
-    for x, py in pts:
-        key = (round(x, 6), round(py, 6))
-        if key in seen:
-            continue
-        seen.add(key)
-        if abs(py - y) > 1e-9:
-            wire((x, py), (x, y), net + f'drop{y},{x},{py}')
-        junction((x, y), net + f'j{y},{x}')
-    if label:
-        label_at(net, (x0, y), net + f'lbl{y}')
-
-
-def stub_label(ref, pin, net):
-    """Short copper plus a net name, used to join distant groups."""
-    p = pins[(ref, pin)]
-    xs = [xy[0] for (r, n), xy in pins.items() if r == ref]
-    dx = -grid(4) if p[0] <= sum(xs) / len(xs) else grid(4)
-    end = (p[0] + dx, p[1])
-    wire(p, end, net + ref + pin + 'stub')
-    label_at(net, end, net + ref + pin + 'sl')
+    block(ref, value, [('A', anode, 'L'), ('K', cathode, 'R')], x, y, hide_leg_text=True)
 
 
 def stub_end(ref, pin):
     p = pins[(ref, pin)]
-    xs = [xy[0] for (r, n), xy in pins.items() if r == ref]
-    dx = -grid(4) if p[0] <= sum(xs) / len(xs) else grid(4)
+    xs = [coord[0] for (r, n), coord in pins.items() if r == ref]
+    dx = -grid(8) if p[0] <= sum(xs) / len(xs) else grid(8)
     return (round(p[0] + dx, 2), p[1])
 
 
@@ -275,14 +242,16 @@ def pair_bus(driver, load, connector, net_p, net_n):
         d = pins[(driver, dpin)]
         l = pins[(load, lpin)]
         c = pins[(connector, cpin)]
-        # Meet the existing pin stubs; do not overlap them (KiCad drops the pin).
-        d_stub = (d[0] + grid(4), d[1])
-        l_stub = (l[0] - grid(4), l[1])
-        c_stub = (c[0] - grid(4), c[1])
+        # Meet existing pin stubs on the outward side of each symbol.
+        d_stub = stub_end(driver, dpin)
+        l_stub = stub_end(load, lpin)
+        c_stub = stub_end(connector, cpin)
         rail_y = max(d[1], l[1], c[1]) + lane
-        dx = d[0] + inset
-        lx = l[0] - inset
-        cx = c[0] - inset
+        def lane_x(stub, pin):
+            return stub[0] + (inset if stub[0] >= pin[0] else -inset)
+        dx = lane_x(d_stub, d)
+        lx = lane_x(l_stub, l)
+        cx = lane_x(c_stub, c)
         wire(d_stub, (dx, d[1]), net + 'd')
         wire((dx, d[1]), (dx, rail_y), net + 'dv')
         wire((dx, rail_y), (lx, rail_y), net + 'rail')
@@ -293,6 +262,9 @@ def pair_bus(driver, load, connector, net_p, net_n):
         junction(d_stub, net + 'sd')
         junction(l_stub, net + 'sl')
         junction(c_stub, net + 'sc')
+        junction((dx, d[1]), net + 'ed')
+        junction((lx, l[1]), net + 'el')
+        junction((cx, c[1]), net + 'ec')
         junction((dx, rail_y), net + 'jd')
         junction((lx, rail_y), net + 'jl')
         junction((cx, rail_y), net + 'jc')
@@ -375,7 +347,9 @@ def power_channel(prefix, y, dc_net, return_net, cmd, out_p, out_n, load_ref, lo
     block('J' + prefix, conn_value,
           [('POS', out_p, 'L'), ('RETURN', out_n, 'L')],
           grid(460), y + grid(28))
-    two(load_ref, load_value, out_p, out_n, grid(540), y)
+    # Both load pins on the left so the output bus can T onto them the same
+    # way it taps the feedthrough, without crossing the symbol body.
+    block(load_ref, load_value, [('1', out_p, 'L'), ('2', out_n, 'L')], grid(540), y + grid(28))
     pair_bus('U' + prefix, load_ref, 'J' + prefix, out_p, out_n)
 
 
@@ -409,8 +383,23 @@ join('U601', '5', 'Y601', '2', 'gasn')
 join('U602', '5', 'Z601', '1', 'neutp')
 join('U602', '6', 'Z601', '2', 'neutn')
 
+# Tap Magnos J3/J4/J1 on copper offset from the pin numbers. Long runs
+# through the original drawing short the paired connector pins. Plasma-side
+# stubs already carry the same net names, which is the KiCad join.
+j3a = beta_pins['BOOST_AC_A']
+j3b = beta_pins['BOOST_AC_B']
+# Sit on the existing J3 output segments, not on the pin numbers.
+label_at('BOOST_AC_A', (round(j3a[0] + grid(4), 2), j3a[1]), 'j3a', 0)
+label_at('BOOST_AC_B', (round(j3b[0] - grid(4), 2), j3b[1]), 'j3b', 180)
+for net in ('BOOST_DC_P', 'BOOST_DC_N', 'INPUT_5V', 'INPUT_RETURN'):
+    sx, sy, _ix, _iy = beta_pins[net]
+    end = (round(sx - grid(8), 2), sy)
+    wire((sx, sy), end, 'beta' + net)
+    label_at(net, end, 'beta' + net + 'lbl', 180)
+
 note('HV electrode branches + coil channels + valve + neutralizer SHARE the available input power.', grid(400), grid(444))
-note('TBD means not specified by source. This is a wired functional architecture, not a fabrication-ready design.', grid(400), grid(448))
+note('Magnos J3 AC output is wired to the HV rectifier; J4 DC output is wired to the coil drivers.', grid(400), grid(448))
+note('TBD means not specified by source. This is a wired functional architecture, not a fabrication-ready design.', grid(400), grid(452))
 
 (ROOT / 'magnos-plasma.kicad_sch').write_text(dump(root) + '\n')
 (ROOT / 'magnos-plasma-wiring.json').write_text(

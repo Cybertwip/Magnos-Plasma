@@ -65,7 +65,7 @@ if(is_undef(assembly_include)) magnos_beta_enclosure();
     inductance = constant('COIL_INDUCTANCE_H')
     current = constant('COIL_FIELD_LIMIT_T') * length / (4 * math.pi * 1e-7 * turns)
     source_manifest = {}
-    for source, destination in [('schem.kicad_sch', 'magnos_reference.kicad_sch'), ('Magnos.kicad_sch', 'magnos_earlier_reference.kicad_sch')]:
+    for source, destination in [('schem.kicad_sch', 'magnos_reference.kicad_sch')]:
         data = (args.magnos / source).read_bytes()
         (ROOT / destination).write_bytes(data)
         source_manifest[source] = {'copy': destination, 'sha256': hashlib.sha256(data).hexdigest(), 'bytes': len(data)}
@@ -199,7 +199,7 @@ R3 SHIELD_P 0 {equivalent_r:.9g}
 .tran 100 100000 uic
 .end
 ''')
-    print('Generated SCAD, KiCad equivalent, SPICE, parameters and two unchanged Magnos references.')
+    print('Generated SCAD, KiCad equivalent, SPICE, parameters and Magnos reference copy.')
 
 if __name__ == '__main__':
     main()

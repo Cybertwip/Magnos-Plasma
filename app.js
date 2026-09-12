@@ -25,8 +25,9 @@ const ALPHA_CENTAURI_DISTANCE_LY = 4.2465;
 const DISPLAY_UNITS_PER_AU = 10;
 const MAX_TRAIL_POINTS = 900;
 const MAX_ROCKET_TRAIL_POINTS = 1400;
-const PLASMA_CRUISE_START_AU = 1.2;
+const PLASMA_CRUISE_START_AU = 35;
 const SOLAR_SYSTEM_EXIT_AU = 120;
+const INTERSTELLAR_VIEW_AU = 120;
 
 // During planetary transfers the plasma drive is used in short, high-power
 // momentum-building burns instead of waiting until heliocentric escape.  The
@@ -556,6 +557,23 @@ function plasmaThrottleCommand() {
   return clamp(Number(cruiseThrustSlider?.value ?? 100) / 100, 0, 1);
 }
 
+function magnosGainSetting() {
+  if (typeof document === "undefined") return 1;
+  return clamp(Number(document.getElementById("magnosGain")?.value) || 1, 1, 6000);
+}
+
+function magnosBoosterForPlasma(plasmaPowerW = 0) {
+  const gain = magnosGainSetting();
+  const loadSelect = typeof document === "undefined" ? null : document.getElementById("magnosLoad");
+  const requestedOhm = Number(loadSelect?.value);
+  const feedPlasma = !Number.isFinite(requestedOhm) || requestedOhm <= 0 || loadSelect?.value === "plasma" || Boolean(rocket?.active);
+  if (feedPlasma && plasmaPowerW > 0) {
+    const targetV = 5 * gain;
+    return magnosBooster({ gain, loadOhm: Math.max(targetV * targetV / plasmaPowerW, 1e-9) });
+  }
+  return magnosBooster({ gain, loadOhm: Number.isFinite(requestedOhm) && requestedOhm > 0 ? requestedOhm : 1e9 });
+}
+
 function radiatorRejectCapacityW(areaM2 = RADIATOR_AREA_MAX_M2, targetK = RADIATOR_TARGET_K) {
   return RADIATOR_EMISSIVITY * STEFAN_BOLTZMANN * areaM2 * Math.max(
     targetK ** 4 - CMB_TEMPERATURE_K ** 4,
@@ -1021,12 +1039,14 @@ function optimizeSlingshotRoute(options = {}) {
   if ((options.encountersUsed ?? 0) < MAX_ASSIST_ENCOUNTERS) {
     for (const target of BODY_DEFINITIONS.filter(body => body.elements && !visited.has(body.name) && body.name !== startName)) {
       const naturalTime = hohmannTime(startPosition.length(), getBody(target.name).position.distanceTo(sun.position), SUN_MU);
-      for (const factor of [0.25, 0.5, 0.75, 1, 1.25, 1.5]) {
+      for (const factor of [0.5, 0.75, 1, 1.25, 1.5, 1.75, 2]) {
         const transferDuration = clamp(naturalTime * factor, 2 * DAY, 20 * YEAR);
         const date = new Date(currentDate().getTime() + transferDuration * 1000);
         const arrival = predictPlanetRelative(target.name, date);
         const offset = encounterOffsetFor(target.name, arrival.position);
         const endpoint = arrival.position.clone().add(offset);
+        // Outward chain only: a Venus/Mercury first cut heads toward the Sun.
+        if (endpoint.length() < startPosition.length() * 0.95) continue;
         const solution = solveLambert(startPosition, endpoint, transferDuration, startVelocity, SUN_MU);
         if (!solution) continue;
         const departureDeltaV = solution.v1.distanceTo(startVelocity);
@@ -1035,11 +1055,16 @@ function optimizeSlingshotRoute(options = {}) {
         if (departureDeltaV > 0.8 * budget) continue;
         const assist = gravityAssist(solution.v2, arrival.velocity, G * target.mass, target.radiusM + altitudeM);
         if (!assist || assist.energyGainJkg <= 0) continue;
-        // Reject solar-intersecting conics even if the endpoint solver converged.
+        // Reject sun-grazing and interior-crossing conics. Planetary legs must
+        // stay outside ~85% of the inner endpoint radius.
         const h2 = new THREE.Vector3().crossVectors(startPosition, solution.v1).lengthSq();
         const energy = solution.v1.lengthSq() / 2 - SUN_MU / startPosition.length();
         const eccentricity = Math.sqrt(Math.max(0, 1 + 2 * energy * h2 / SUN_MU ** 2));
-        if (h2 / SUN_MU / (1 + eccentricity) < SUN_RADIUS_M * 3) continue;
+        const periapsis = h2 / SUN_MU / (1 + eccentricity);
+        const innerRadius = Math.min(startPosition.length(), endpoint.length());
+        // Outer-planet legs must not drop far inside the departure radius.
+        if (endpoint.length() > startPosition.length() * 1.15 && periapsis < 0.88 * startPosition.length()) continue;
+        if (periapsis < Math.max(SUN_RADIUS_M * 50, 0.45 * innerRadius)) continue;
         candidates.push({name:target.name, previousName:startName, transferDuration, naturalTime,
           solution, endpoint, encounterOffset:offset, arrivalPlanetVelocity:arrival.velocity,
           departureDeltaV, poweredDeltaV:departureDeltaV, burnBudgetDeltaV:budget,
@@ -1118,8 +1143,8 @@ function replanFromCurrentState(name) {
     routeStat.textContent = `${rocket.visitedPlanets.join(" → ")} → ${target} · strongest reachable gain ${formatNumber(rocket.plan.totalFlybyEnergyGainJkg / 1e6, 1)} MJ/kg`;
     beginArcLeg(target);
   } else {
-    routeStat.textContent = `${rocket.visitedPlanets.join(" → ")} → Sun · no stronger reachable unvisited assist`;
-    beginSolarDiveFromLastAssist(name);
+    routeStat.textContent = `${rocket.visitedPlanets.join(" → ")} · outbound escape`;
+    beginOutboundEscape(name);
   }
 }
 
@@ -1203,48 +1228,29 @@ function advanceSlingshotArc(dt) {
   }
 }
 
-function beginSolarDiveFromLastAssist(lastPlanetName) {
+function beginOutboundEscape(lastPlanetName) {
   const sun = getBody("Sol");
-  const planet = getBody(lastPlanetName);
-  const radial = planet.position.clone().sub(sun.position).normalize();
-  const planetRelativeVelocity = planet.velocity.clone().sub(sun.velocity);
-  let tangential = planetRelativeVelocity
-    .clone()
-    .addScaledVector(radial, -planetRelativeVelocity.dot(radial));
-  if (tangential.lengthSq() < 1) tangential = new THREE.Vector3(0, 0, 1);
-  tangential.normalize();
+  const relativeVelocity = rocket.velocity.clone().sub(sun.velocity);
+  const solarDistance = Math.max(rocket.position.distanceTo(sun.position), SUN_RADIUS_M);
+  const specificEnergy = 0.5 * relativeVelocity.lengthSq() - SUN_MU / solarDistance;
 
-  const position = rocket.position.clone();
-  const radius = position.distanceTo(sun.position);
-  const targetPerihelion = Number(periSlider.value) * SUN_RADIUS_M;
-
-  // Carry the ideal gravity-assist energy into a conic constrained to the
-  // requested perihelion. For a conic with specific energy ε and perihelion q:
-  // h² = 2 q² (ε + μ/q).  At radius r, v² = 2(ε + μ/r).
-  const baseSpecificEnergy = -SUN_MU / (radius + targetPerihelion);
-  const specificEnergy = baseSpecificEnergy + rocket.routeEnergyGainJkg;
-  const totalSpeedSq = Math.max(1, 2 * (specificEnergy + SUN_MU / radius));
-  const angularMomentumSq = Math.max(
-    0,
-    2 * targetPerihelion ** 2 * (specificEnergy + SUN_MU / targetPerihelion),
-  );
-  const tangentialSpeed = Math.min(Math.sqrt(totalSpeedSq), Math.sqrt(angularMomentumSq) / radius);
-  const radialSpeed = Math.sqrt(Math.max(0, totalSpeedSq - tangentialSpeed ** 2));
-
-  rocket.position.copy(position);
-  rocket.velocity.copy(sun.velocity)
-    .addScaledVector(radial, -radialSpeed)
-    .addScaledVector(tangential, tangentialSpeed);
-  rocket.acceleration.copy(accelerationAt(position));
-  rocket.pathVelocity = null;
+  rocket.acceleration = accelerationAt(rocket.position);
+  rocket.pathVelocity = rocket.velocity.clone();
   rocket.arcMode = false;
   rocket.leg = null;
-  rocket.targetPerihelion = targetPerihelion;
-  rocket.minimumSolarDistance = radius;
+  rocket.escaped = specificEnergy > 0;
+  // Do not retarget perihelion at the Sun. Keep the post-assist heliocentric
+  // state and raise energy with plasma if the flyby left the ship bound.
+  rocket.oberthBurned = true;
   rocket.lastRadialVelocity = rocketRadialVelocity();
+  rocket.minimumSolarDistance = Math.min(rocket.minimumSolarDistance, solarDistance);
 
-  rocketStateStat.textContent = `Optimal chain complete · solar dive from ${lastPlanetName}`;
-  oberthStat.textContent = `Armed @ ${formatNumber(targetPerihelion / SUN_RADIUS_M, 1)} R☉`;
+  rocketStateStat.textContent = rocket.escaped
+    ? `Assist chain complete · outbound from ${lastPlanetName}`
+    : `Assist chain complete · raising orbit from ${lastPlanetName}`;
+  oberthStat.textContent = rocket.escaped
+    ? `Hyperbolic · v∞ ${formatNumber(Math.sqrt(2 * specificEnergy) / 1000, 2)} km/s`
+    : "Prograde plasma until escape";
 }
 
 function launchRocket() {
@@ -1324,10 +1330,10 @@ function launchRocket() {
   };
 
   if (plan.route.length) beginArcLeg(plan.route[0]);
-  else beginSolarDiveFromLastAssist("Earth");
+  else beginOutboundEscape("Earth");
   routeStat.textContent = plan.route.length
     ? `Earth → ${plan.route[0]} · strongest reachable gain ${formatNumber(plan.totalFlybyEnergyGainJkg / 1e6, 1)} MJ/kg · replan after flyby`
-    : "No reachable positive-gain assist · solar dive";
+    : "No reachable positive-gain assist · outbound escape";
   assistGainStat.textContent = `${formatNumber(plan.totalEnergyGainJkg / 1e6, 1)} MJ/kg · plasma Δv ${formatNumber(plan.totalPoweredDeltaV / 1000, 1)} km/s`;
   setFocus("Rocket", 5.5);
   rebuildRocketTrail();
@@ -1377,7 +1383,7 @@ function initializeCruiseProfile() {
   recomputeCruiseBrakePoint();
   rebuildRocketTrail();
 
-  if (!rocket.autoCruiseViewSet) {
+  if (!rocket.autoCruiseViewSet && solarDistance >= INTERSTELLAR_VIEW_AU * AU) {
     rocket.autoCruiseViewSet = true;
     setFocus("Cruise overview");
   }
@@ -1583,6 +1589,7 @@ function updatePlasmaCircuit(dt, enabled, maximumThrustN = Infinity) {
     properAcceleration,
   };
   updateRocketThermalState(dt, drive);
+  rocket.magnosBus = magnosBoosterForPlasma(ohmicLossW + acceleratorPowerW);
   return drive;
 }
 
@@ -1591,7 +1598,13 @@ function applyCruisePropulsion(dt) {
 
   const sun = getBody("Sol");
   const solarDistance = rocket.position.distanceTo(sun.position);
-  if (!rocket.cruiseActive && rocket.escaped && solarDistance >= PLASMA_CRUISE_START_AU * AU) initializeCruiseProfile();
+  const relativeNow = rocket.velocity.clone().sub(sun.velocity);
+  const specificEnergy = 0.5 * relativeNow.lengthSq() - SUN_MU / Math.max(solarDistance, SUN_RADIUS_M);
+  rocket.escaped = specificEnergy > 0;
+  const startCruise = rocket.oberthBurned && (
+    !rocket.escaped || solarDistance >= PLASMA_CRUISE_START_AU * AU
+  );
+  if (!rocket.cruiseActive && startCruise) initializeCruiseProfile();
 
   const drive = updatePlasmaCircuit(dt, Boolean(rocket.cruiseActive && rocket.escaped));
   if (!rocket.cruiseActive || !(drive.properAcceleration > 0)) return;
@@ -1709,10 +1722,10 @@ function resetSimulation(date = new Date()) {
 function interstellarViewActive() {
   if (!rocket) return false;
   const sun = getBody("Sol");
+  const solarDistance = rocket.position.distanceTo(sun.position);
   return Boolean(
-    rocket.cruiseActive
-    || rocket.reachedAlpha
-    || rocket.position.distanceTo(sun.position) >= PLASMA_CRUISE_START_AU * AU
+    rocket.reachedAlpha
+    || solarDistance >= INTERSTELLAR_VIEW_AU * AU
   );
 }
 
@@ -2326,13 +2339,15 @@ function estimateRemainingAssistSeconds() {
 }
 
 function updateTelemetry() {
-  const booster = magnosBooster({
-    gain: clamp(Number(document.getElementById("magnosGain").value) || 1, 1, 6000),
-    loadOhm: Number(document.getElementById("magnosLoad").value),
-  });
+  const plasmaDemandW = rocket ? (rocket.acceleratorPowerW + rocket.ohmicLossW) : 0;
+  const booster = rocket?.magnosBus ?? magnosBoosterForPlasma(plasmaDemandW);
   document.getElementById("magnosOutput").textContent = `${formatVoltage(booster.outputV)} · ${formatNumber(booster.outputA * 1000, 4)} mA · ${formatNumber(booster.outputW, 3)} W`;
   document.getElementById("magnosInput").textContent = `5 V · ${formatNumber(booster.inputA, 3)} A · ${formatNumber(booster.lossW, 3)} W loss`;
-  document.getElementById("magnosStatus").textContent = booster.limited ? "Power limited · gain target unavailable" : "Ideal envelope · gain unverified";
+  document.getElementById("magnosStatus").textContent = rocket
+    ? (booster.limited
+      ? "Feeding plasma coil / electrode drivers · 5 V·1 A ceiling"
+      : "Feeding plasma coil / electrode drivers")
+    : (booster.limited ? "Power limited · gain target unavailable" : "Standby · plasma load disconnected");
 
   const sun = getBody("Sol");
   const now = currentDate();
