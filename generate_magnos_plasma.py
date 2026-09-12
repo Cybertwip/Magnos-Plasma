@@ -472,7 +472,8 @@ for net_index, net in enumerate(all_nets):
 
 bottom_points = {}
 for (net,x,y),taps in rail_taps.items():
-    wire((x,min(p[1] for p in taps)),(x,y),'rail-'+net+str(x))
+    levels=sorted({p[1] for p in taps}|{y})
+    for j,(a,b) in enumerate(zip(levels,levels[1:])):wire((x,a),(x,b),'rail-'+net+str(x)+str(j))
     for i,tap in enumerate(taps): junction(tap,'tap-'+net+str(x)+str(i))
     bottom_points.setdefault(net,[]).append((x,y))
 
@@ -491,7 +492,8 @@ for i,(net,(px,py,ix,iy)) in enumerate(beta_pins.items()):
 
 for net,points in bottom_points.items():
     if len(points)>1:
-        wire((min(p[0] for p in points),points[0][1]),(max(p[0] for p in points),points[0][1]),'backplane-'+net)
+        ordered=sorted(points)
+        for j,(a,b) in enumerate(zip(ordered,ordered[1:])):wire(a,b,'backplane-'+net+str(j))
     for i,point in enumerate(points):junction(point,'backplane-tap-'+net+str(i))
     label_at(net,(max(p[0] for p in points),points[0][1]),'backplane-label-'+net)
 note('MAGNOS PLASMA / ALL CONNECTIONS DRAWN / CROSSINGS CONNECT ONLY AT JUNCTION DOTS',grid(630),grid(10))

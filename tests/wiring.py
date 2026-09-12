@@ -61,7 +61,7 @@ with tempfile.TemporaryDirectory() as temp:
     physical_codes = {}
     for net_name, endpoints in groups.items():
         codes = {actual[endpoint] for endpoint in endpoints}
-        assert len(codes) == 1, (net_name, 'not fully wired', codes)
+        assert len(codes) == 1, (net_name, 'not fully wired', [(endpoint, actual[endpoint]) for endpoint in endpoints])
         code = next(iter(codes))
         assert code not in physical_codes, (net_name, 'shorted to', physical_codes.get(code))
         physical_codes[code] = net_name

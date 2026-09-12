@@ -42,11 +42,38 @@ for(const [originName,targetName] of [['Earth','Mars'],['Mars','Jupiter'],['Venu
    assert.ok(rocket.position.distanceTo(previous)<rocket.velocity.length()*dt*2+1e7,'no position snaps');
    previous.copy(rocket.position);
  }
- console.log('debug', plan.encounters[0].arc.peakAcceleration, rocket.plasmaProperAcceleration,rocket.thermalDerate,rocket.coilTempK,rocket.reactorTempK,rocket.radiatorTempK,rocket.hullTempK,rocket.shieldTempK,rocket.position.clone().sub(getBody('Sol').position).distanceTo(plan.encounters[0].arc.sample(plan.totalTransferDuration).position),rocketStateStat.textContent);
  assert.equal(rocket.encountersCompleted,1,rocketStateStat.textContent);
  assert.ok(rocket.assistPlasmaDeltaV>0);
+ assert.equal(rocket.lockedTo,targetName);
+ const offset=rocket.lockOffset.clone(),beforeTime=rocket.earthElapsedSeconds;
+ for(let day=0;day<12;day++) velocityVerletStep(6*3600);
+ assert.ok(rocket.position.clone().sub(getBody(targetName).position).distanceTo(offset)<1e-3,'planet lock follows orbital motion');
+ assert.equal(rocket.earthElapsedSeconds,beforeTime+3*DAY);
+ const next=poweredRoutePlan(targetName,originName,rocket);
+ assert.ok(next);
+ assert.ok(next.startPosition.distanceTo(rocket.position.clone().sub(getBody('Sol').position))<1e-3,'next route starts at docked position');
  assert.ok(rocket.velocity.distanceTo(getBody(targetName).velocity)<500,'rendezvous velocity');
  console.log(originName+' -> '+targetName, (plan.totalTransferDuration/DAY).toFixed(2)+' days',steps+' steps',rocketStateStat.textContent);
 }
+`,context);
+vm.runInContext(`
+epochDate=new Date('2026-09-12T00:00:00Z');simulatedSeconds=0;initializeBodies(epochDate);
+const flybyPlan=optimizeSlingshotRoute();
+assert.ok(flybyPlan.route.length);
+assert.ok(flybyPlan.encounters[0].arc && flybyPlan.encounters[0].flyby);
+assert.equal(flybyPlan.encounters[0].averageSpeed,Math.max(...flybyPlan.candidates.map(c=>c.averageSpeed)));
+const sol=getBody('Sol');
+rocket={active:true,arcMode:true,position:sol.position.clone().add(flybyPlan.startPosition),velocity:sol.velocity.clone().add(flybyPlan.encounters[0].solution.v1),plan:flybyPlan,
+earthElapsedSeconds:0,travelerProperSeconds:0,peakSpeed:0,minimumSolarDistance:Infinity,assistPlasmaDeltaV:0,encountersCompleted:0,
+routeEnergyGainJkg:0,routeFlybyEnergyGainJkg:0,routePoweredEnergyGainJkg:0,replans:0,visitedPlanets:['Earth'],plannedRouteHistory:[...flybyPlan.route],lastEncounterName:'Earth'};
+const oberthStat={textContent:''};
+beginArcLeg(flybyPlan.route[0]);
+let steps=0;
+while(rocket.active && rocket.encountersCompleted===0 && steps++<200000) velocityVerletStep(currentPhysicsStep());
+assert.equal(rocket.encountersCompleted,1,'powered flyby must encounter the actual planet');
+assert.ok(rocket.routeFlybyEnergyGainJkg>0);
+assert.ok(!rocket.lockedTo,'slingshots continue without docking');
+assert.ok(rocket.assistPlasmaDeltaV>0);
+console.log('Powered flyby',flybyPlan.route[0],(flybyPlan.totalTransferDuration/DAY).toFixed(2)+' days',rocket.plan.route);
 `,context);
 console.log('PASS: arc derivatives, capped cascade power, magnetic momentum exchange, relativistic clocks and integrated powered rendezvous');
