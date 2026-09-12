@@ -79,3 +79,64 @@ export function gravityAssist(incoming,planetVelocity,muPlanet,periapsis) {
   return {velocity,vInfinity:speed,turnAngle:turn,
     energyGainJkg:(velocity.lengthSq()-incoming.lengthSq())/2};
 }
+
+// Cubic Hermite arc: endpoint derivatives are the actual orbital velocities.
+// atan2 gives signed tangent headings; it is geometry, not a replacement for
+// dynamics. The required plasma acceleration is r''(t) - solar gravity.
+export function tangentArc(r0, v0, r1, v1, seconds, mu) {
+  if (!(seconds > 0) || !(mu >= 0) || ![seconds,mu,...r0.toArray(),...v0.toArray(),...r1.toArray(),...v1.toArray()].every(Number.isFinite)) return null;
+  const sample = time => {
+    const u=clamp(time/seconds,0,1), u2=u*u, u3=u2*u;
+    const position=r0.clone().multiplyScalar(2*u3-3*u2+1)
+      .addScaledVector(v0,seconds*(u3-2*u2+u)).addScaledVector(r1,-2*u3+3*u2)
+      .addScaledVector(v1,seconds*(u3-u2));
+    const velocity=r0.clone().multiplyScalar((6*u2-6*u)/seconds)
+      .addScaledVector(v0,3*u2-4*u+1).addScaledVector(r1,(-6*u2+6*u)/seconds)
+      .addScaledVector(v1,3*u2-2*u);
+    const acceleration=r0.clone().multiplyScalar((12*u-6)/seconds**2)
+      .addScaledVector(v0,(6*u-4)/seconds).addScaledVector(r1,(-12*u+6)/seconds**2)
+      .addScaledVector(v1,(6*u-2)/seconds);
+    const plasmaAcceleration=acceleration.clone().addScaledVector(position,mu/Math.max(position.length(),1)**3);
+    return {position,velocity,acceleration,plasmaAcceleration,heading:Math.atan2(velocity.z,velocity.x)};
+  };
+  let peakAcceleration=0, deltaV=0, minimumRadius=Infinity;
+  const count=256;
+  for(let i=0;i<=count;i++) {
+    const s=sample(seconds*i/count), a=s.plasmaAcceleration.length();
+    peakAcceleration=Math.max(peakAcceleration,a);
+    minimumRadius=Math.min(minimumRadius,s.position.length());
+    deltaV+=a*seconds/count*(i===0 || i===count ? 0.5 : 1);
+  }
+  return {sample,seconds,peakAcceleration,deltaV,minimumRadius,method:'Plasma tangent arc'};
+}
+
+export function planPoweredTransfer({position,velocity,predictArrival,acceleration,mu,minimumRadius=0,minimumSeconds=86400,maximumSeconds=20*365.25*86400}) {
+  if (!(acceleration>0) || !Number.isFinite(acceleration)) return null;
+  // Search moving endpoints, reserving 40% of available thrust for tracking,
+  // startup and thermal changes. Sampled feasibility is not optimal control.
+  for(let seconds=minimumSeconds;seconds<=maximumSeconds;seconds*=1.12) {
+    const arrival=predictArrival(seconds);
+    const arc=tangentArc(position,velocity,arrival.position,arrival.velocity,seconds,mu);
+    if(arc && arc.peakAcceleration<=acceleration*0.6 && arc.minimumRadius>=minimumRadius)
+      return {arc,arrival,seconds};
+  }
+  return null;
+}
+
+// Ideal rest-to-rest relativistic trip; no fuel, shield or power feasibility implied.
+export function interstellarEnvelope(distance,acceleration) {
+  const c=299792458;
+  if (!(distance>0) || !(acceleration>0)) return null;
+  const gamma=1+acceleration*distance/(2*c*c), eta=Math.acosh(gamma);
+  return {earthSeconds:2*c/acceleration*Math.sinh(eta),travelerSeconds:2*c/acceleration*eta,
+    peakSpeed:c*Math.tanh(eta),kineticJkg:(gamma-1)*c*c,lightSeconds:distance/c};
+}
+
+// Classical external-plasma drag upper bound. Never used as a free vacuum brake.
+export function magneticBrake({densityKgM3,speed,areaM2,fieldT}) {
+  if (![densityKgM3,speed,areaM2,fieldT].every(Number.isFinite) || Math.min(densityKgM3,speed,areaM2,fieldT)<0) throw new RangeError('Nonnegative finite brake inputs required');
+  if(speed>=0.1*299792458) return {forceN:0,powerW:0,valid:false};
+  const pressure=fieldT**2/(2*4*Math.PI*1e-7);
+  const forceN=Math.min(2*densityKgM3*speed**2,pressure)*areaM2;
+  return {forceN,powerW:forceN*speed,valid:true};
+}

@@ -3,7 +3,7 @@ import vm from 'node:vm';
 import assert from 'node:assert/strict';
 import * as THREE from '../vendor/three.mjs';
 import {solveLambert, gravityAssist, hohmannTime} from '../transfer-planner.mjs';
-import {magnosBooster} from '../magnos-booster.mjs';
+import {magnosBooster,magnosBank} from '../magnos-booster.mjs';
 // Independently integrate Lambert endpoint velocities with RK4, normalized units.
 function propagate(r,v,t) {
   r=r.clone();v=v.clone();const dt=t/4000;
@@ -30,7 +30,7 @@ const assist=gravityAssist(incoming,pv,1.2669e17,7.2e7);
 assert.ok(Math.abs(assist.velocity.clone().sub(pv).length()-incoming.clone().sub(pv).length())<1e-8);
 assert.ok(assist.energyGainJkg>0);
 const source=fs.readFileSync(new URL('../app.js',import.meta.url),'utf8');
-const context=vm.createContext({THREE,assert,console,solveLambert,gravityAssist,hohmannTime,magnosBooster});
+const context=vm.createContext({THREE,assert,console,solveLambert,gravityAssist,hohmannTime,magnosBooster,magnosBank});
 vm.runInContext(source.slice(0,source.indexOf('const viewport =')).replace(/^import .*;$/gm,''),context);
 vm.runInContext(`
 const cruiseThrustSlider={value:100}, injectionSlider={value:3.2}, flybySlider={value:500}, periSlider={value:4};

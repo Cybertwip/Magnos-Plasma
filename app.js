@@ -1,6 +1,6 @@
 import * as THREE from "./vendor/three.mjs";
-import { magnosBooster } from "./magnos-booster.mjs";
-import { solveLambert, gravityAssist, hohmannTime } from "./transfer-planner.mjs";
+import { magnosBooster, magnosBank } from "./magnos-booster.mjs";
+import { solveLambert, gravityAssist, hohmannTime, planPoweredTransfer, interstellarEnvelope, magneticBrake } from "./transfer-planner.mjs";
 
 // three.mjs is intentionally a minimal export wrapper. These are the numeric
 // constants used by Three.js for material side selection.
@@ -21,7 +21,7 @@ const SUN_MU = 1.3271244e20;
 const SUN_MASS = SUN_MU / G;
 const SUN_RADIUS_M = 695_700_000;
 const LY_M = 9.4607304725808e15;
-const ALPHA_CENTAURI_DISTANCE_LY = 4.2465;
+const ALPHA_CENTAURI_DISTANCE_LY = 4.37; // Alpha Centauri A/B; Proxima is nearer
 const DISPLAY_UNITS_PER_AU = 10;
 const MAX_TRAIL_POINTS = 900;
 const MAX_ROCKET_TRAIL_POINTS = 1400;
@@ -557,21 +557,15 @@ function plasmaThrottleCommand() {
   return clamp(Number(cruiseThrustSlider?.value ?? 100) / 100, 0, 1);
 }
 
-function magnosGainSetting() {
-  if (typeof document === "undefined") return 1;
-  return clamp(Number(document.getElementById("magnosGain")?.value) || 1, 1, 6000);
+function setting(id, fallback) {
+  if (typeof document === "undefined") return fallback;
+  const value = Number(document.getElementById(id)?.value);
+  return Number.isFinite(value) && value > 0 ? value : fallback;
 }
-
-function magnosBoosterForPlasma(plasmaPowerW = 0) {
-  const gain = magnosGainSetting();
-  const loadSelect = typeof document === "undefined" ? null : document.getElementById("magnosLoad");
-  const requestedOhm = Number(loadSelect?.value);
-  const feedPlasma = !Number.isFinite(requestedOhm) || requestedOhm <= 0 || loadSelect?.value === "plasma" || Boolean(rocket?.active);
-  if (feedPlasma && plasmaPowerW > 0) {
-    const targetV = 5 * gain;
-    return magnosBooster({ gain, loadOhm: Math.max(targetV * targetV / plasmaPowerW, 1e-9) });
-  }
-  return magnosBooster({ gain, loadOhm: Number.isFinite(requestedOhm) && requestedOhm > 0 ? requestedOhm : 1e9 });
+function engineCount() { return clamp(Math.round(setting("engineCountSlider", 1)), 1, 8); }
+function voltageCeiling() { return setting("plasmaVoltageSlider", 10) * setting("voltageScale", 1e6); }
+function magnosBoosterForPlasma() {
+  return magnosBank({count:clamp(Math.round(setting("boosterCount",1)),1,8),targetV:voltageCeiling(),loadOhm:1e24});
 }
 
 function radiatorRejectCapacityW(areaM2 = RADIATOR_AREA_MAX_M2, targetK = RADIATOR_TARGET_K) {
@@ -581,9 +575,9 @@ function radiatorRejectCapacityW(areaM2 = RADIATOR_AREA_MAX_M2, targetK = RADIAT
   );
 }
 
-function thermalElectricalPowerLimitW(coilCurrentA) {
+function thermalElectricalPowerLimitW(coilCurrentA, areaM2 = RADIATOR_AREA_MAX_M2) {
   const ohmicLossW = coilCurrentA ** 2 * COIL_RESISTANCE_OHM;
-  const radiatorBudgetW = Math.max(0, radiatorRejectCapacityW() - AVIONICS_HEAT_W);
+  const radiatorBudgetW = Math.max(0, radiatorRejectCapacityW(areaM2, setting("radiatorTarget", RADIATOR_TARGET_K)) - AVIONICS_HEAT_W);
   const driveWasteBudgetW = radiatorBudgetW / RADIATOR_WASTE_FRACTION;
   return Math.max(0, (driveWasteBudgetW - ohmicLossW) / Math.max(1 - PLASMA_EFFICIENCY, 1e-6));
 }
@@ -593,12 +587,12 @@ function steadyPlasmaDrive(throttle = plasmaThrottleCommand(), thermalDerate = 1
   const coilCurrentA = COIL_CURRENT_LIMIT_A * magneticThrottle;
   const magneticFieldT = MU0 * COIL_TURNS * coilCurrentA / COIL_LENGTH_M;
   const thermalPowerLimitW = thermalElectricalPowerLimitW(coilCurrentA);
-  const voltageFromThermalsV = coilCurrentA > 1e-9 ? thermalPowerLimitW / coilCurrentA : 0;
+  const voltageFromThermalsV = coilCurrentA > 1e-9 ? thermalPowerLimitW / (coilCurrentA * engineCount()) : 0;
   const acceleratorVoltageV = Math.min(
-    PLASMA_ACCELERATOR_VOLTAGE_V * magneticThrottle,
+    voltageCeiling() * magneticThrottle,
     voltageFromThermalsV,
   ) * clamp(thermalDerate, 0, 1);
-  const plasmaCurrentA = coilCurrentA;
+  const plasmaCurrentA = coilCurrentA * engineCount();
   const acceleratorPowerW = acceleratorVoltageV * plasmaCurrentA;
   const ohmicLossW = coilCurrentA ** 2 * COIL_RESISTANCE_OHM;
   const beamPowerW = acceleratorPowerW * PLASMA_EFFICIENCY;
@@ -652,6 +646,7 @@ function formatField(valueVm) {
 function formatVoltage(valueV) {
   if (!Number.isFinite(valueV)) return "—";
   const magnitude = Math.abs(valueV);
+  if (magnitude >= 1e12) return `${formatNumber(valueV / 1e12, 3)} TV`;
   if (magnitude >= 1e9) return `${formatNumber(valueV / 1e9, 3)} GV`;
   if (magnitude >= 1e6) return `${formatNumber(valueV / 1e6, 3)} MV`;
   if (magnitude >= 1e3) return `${formatNumber(valueV / 1e3, 3)} kV`;
@@ -952,6 +947,7 @@ function velocityVerletStep(dt) {
 
 function currentPhysicsStep() {
   if (!rocket?.active) return 6 * 3600;
+  if (rocket.arcMode && rocket.leg.encounter.arc) return Math.min(300, Math.max(1e-6,rocket.leg.duration-rocket.leg.elapsed));
   if (rocket.arcMode) return Math.min(rocket.leg.guidanceDeltaV.length() > 0.1 ? 60 : 3600, Math.max(1e-6, rocket.leg.duration - rocket.leg.elapsed));
 
   const sun = getBody("Sol");
@@ -1168,6 +1164,7 @@ function applyFlybyEncounter(name) {
 
 function advanceSlingshotArc(dt) {
   if (!rocket?.active || !rocket.arcMode || !rocket.leg) return;
+  if (rocket.leg.encounter.arc) { advancePoweredArc(dt); return; }
   const leg = rocket.leg, sun = getBody("Sol"), target = getBody(leg.targetName);
   const remaining = leg.duration - leg.elapsed;
   // Massive bodies have advanced to the end of this step; reconstruct the
@@ -1253,16 +1250,85 @@ function beginOutboundEscape(lastPlanetName) {
     : "Prograde plasma until escape";
 }
 
+function selectedRoute() {
+  if (typeof document === "undefined") return {origin:"Earth",target:"auto"};
+  return {origin:document.getElementById("routeOrigin")?.value || "Earth",target:document.getElementById("routeTarget")?.value || "auto"};
+}
+function poweredRoutePlan(originName, targetName) {
+  const sun=getBody("Sol"), origin=getBody(originName);
+  const start=origin.position.clone().sub(sun.position);
+  const offset=encounterOffsetFor(originName,start).multiplyScalar(2.3);
+  start.add(offset);
+  const velocity=origin.velocity.clone().sub(sun.velocity);
+  const solved=planPoweredTransfer({position:start,velocity,acceleration:steadyPlasmaDrive().properAcceleration,
+    mu:SUN_MU,minimumRadius:Math.max(50*SUN_RADIUS_M,Math.min(start.length(),getBody(targetName).position.distanceTo(sun.position))*0.45),
+    predictArrival:seconds=>{
+      const state=predictPlanetRelative(targetName,new Date(currentDate().getTime()+seconds*1000));
+      state.position.add(encounterOffsetFor(targetName,state.position));
+      return state;
+    }});
+  if(!solved) return null;
+  const naturalTime=hohmannTime(start.length(),solved.arrival.position.length(),SUN_MU);
+  const encounter={name:targetName,method:solved.arc.method,arc:solved.arc,
+    transferDuration:solved.seconds,naturalTime,departureDeltaV:0,poweredDeltaV:solved.arc.deltaV,
+    encounterOffset:encounterOffsetFor(targetName,solved.arrival.position),
+    solution:{v1:velocity,v2:solved.arrival.velocity},burnBudgetDeltaV:solved.arc.deltaV*2};
+  return {route:[targetName],encounters:[encounter],candidates:[encounter],launchExcessMps:0,
+    totalTransferDuration:solved.seconds,totalEnergyGainJkg:0,totalPoweredDeltaV:solved.arc.deltaV,
+    totalFlybyEnergyGainJkg:0,exitSpeed:solved.arrival.velocity.length(),startPosition:start};
+}
+function advancePoweredArc(dt) {
+  const leg=rocket.leg, sun=getBody("Sol"), target=getBody(leg.targetName);
+  const startSun=sun.position.clone().addScaledVector(sun.velocity,-dt);
+  const r=rocket.position.clone().sub(startSun), v=rocket.velocity.clone().sub(sun.velocity);
+  const ref=leg.encounter.arc.sample(leg.elapsed+dt/2);
+  const predicted=r.clone().addScaledVector(v,dt/2);
+  const trackingTime=3600;
+  const command=ref.plasmaAcceleration.clone()
+    .addScaledVector(ref.position.clone().sub(predicted),1/trackingTime**2)
+    .addScaledVector(ref.velocity.clone().sub(v),2/trackingTime);
+  const drive=updatePlasmaCircuit(dt,true,command.length()*SPACECRAFT_MASS_KG);
+  const thrust=command.clone().normalize().multiplyScalar(Math.min(command.length(),drive.properAcceleration));
+  const g=r.clone().multiplyScalar(-SUN_MU/r.length()**3);
+  v.addScaledVector(g,dt/2).addScaledVector(thrust,dt/2);
+  r.addScaledVector(v,dt);
+  v.addScaledVector(r,-SUN_MU*dt/(2*r.length()**3)).addScaledVector(thrust,dt/2);
+  rocket.position.copy(sun.position).add(r); rocket.velocity.copy(sun.velocity).add(v);
+  rocket.pathVelocity=rocket.velocity.clone(); rocket.modeledHeliocentricSpeed=v.length();
+  leg.elapsed+=dt; rocket.earthElapsedSeconds+=dt;
+  rocket.travelerProperSeconds+=properTimeStep(dt,v.length());
+  rocket.assistPlasmaDeltaV+=thrust.length()*dt;
+  leg.plasmaDeltaVApplied+=thrust.length()*dt;
+  rocket.peakSpeed=Math.max(rocket.peakSpeed,v.length());
+  rocket.minimumSolarDistance=Math.min(rocket.minimumSolarDistance,r.length());
+  const braking=thrust.dot(v)<0;
+  rocketStateStat.textContent=`${leg.targetName} · plasma ${braking ? "braking" : "acceleration"} · ${Math.min(100,100*leg.elapsed/leg.duration).toFixed(0)}%`;
+  if(r.length()<SUN_RADIUS_M || rocket.position.distanceTo(target.position)<target.radiusM) {
+    rocket.active=false;rocket.crashed=true;rocketStateStat.textContent="Impact during powered transfer";
+  } else if(leg.elapsed>=leg.duration-1e-6) {
+    const hill=target.position.distanceTo(sun.position)*Math.cbrt(target.mass/(3*SUN_MASS));
+    const miss=rocket.position.distanceTo(target.position);
+    rocket.active=false; rocket.arcMode=false;
+    rocketStateStat.textContent=miss<=hill ? `Arrived in ${target.name} vicinity · ${(rocket.velocity.distanceTo(target.velocity)/1000).toFixed(2)} km/s relative` : `Transfer missed · ${(miss/AU).toFixed(4)} AU from ${target.name}`;
+    if(miss<=hill) rocket.encountersCompleted++;
+    rocket.plasmaThrustN=0;
+    // SOI rendezvous only: no landing, orbit insertion or teleportation.
+  }
+}
+
 function launchRocket() {
   const launchDate = new Date();
   resetSimulation(launchDate);
 
-  const plan = optimizeSlingshotRoute();
-  const earth = getBody("Earth");
+  const route=selectedRoute();
+  if(route.origin===route.target) { rocketStateStat.textContent="Choose different planets"; return; }
+  const plan = route.target==="auto" ? optimizeSlingshotRoute({startName:route.origin}) : poweredRoutePlan(route.origin,route.target);
+  if(!plan) { rocketStateStat.textContent="No powered arc within the thrust and solar-clearance limits";return; }
+  const earth = getBody(route.origin);
   const sun = getBody("Sol");
   const radial = earth.position.clone().sub(sun.position).normalize();
   const earthSoi = 0.929e9;
-  const position = earth.position.clone().addScaledVector(radial, earthSoi * 1.15);
+  const position = plan.startPosition ? sun.position.clone().add(plan.startPosition) : earth.position.clone().addScaledVector(radial, earthSoi * 1.15);
 
   rocket = {
     active: true,
@@ -1283,8 +1349,8 @@ function launchRocket() {
     replans: 0,
     plannedRouteHistory: [...plan.route],
     modeledHeliocentricSpeed: approximatePlanetOrbitalSpeed("Earth") + plan.launchExcessMps,
-    lastEncounterName: "Earth",
-    visitedPlanets: ["Earth"],
+    lastEncounterName: route.origin,
+    visitedPlanets: [route.origin],
     oberthBurned: false,
     escaped: false,
     minimumSolarDistance: position.distanceTo(sun.position),
@@ -1330,11 +1396,12 @@ function launchRocket() {
   };
 
   if (plan.route.length) beginArcLeg(plan.route[0]);
-  else beginOutboundEscape("Earth");
+  else beginOutboundEscape(route.origin);
   routeStat.textContent = plan.route.length
-    ? `Earth → ${plan.route[0]} · strongest reachable gain ${formatNumber(plan.totalFlybyEnergyGainJkg / 1e6, 1)} MJ/kg · replan after flyby`
+    ? `${route.origin} → ${plan.route[0]} · ${plan.encounters[0].method} · ${(plan.totalTransferDuration/DAY).toFixed(1)} d`
     : "No reachable positive-gain assist · outbound escape";
   assistGainStat.textContent = `${formatNumber(plan.totalEnergyGainJkg / 1e6, 1)} MJ/kg · plasma Δv ${formatNumber(plan.totalPoweredDeltaV / 1000, 1)} km/s`;
+  updateRoutePreview(plan);
   setFocus("Rocket", 8);
   rebuildRocketTrail();
 }
@@ -1465,8 +1532,8 @@ function updateRocketThermalState(dt, drive) {
   // 1,200 K mid-band equilibrium while preserving full RL/20 T plasma power.
   // Almost all drive waste heat is routed through the dedicated radiator loop.
   const radiatorInputW = AVIONICS_HEAT_W + driveWasteW * RADIATOR_WASTE_FRACTION;
-  const requiredAreaM2 = radiatorAreaForTarget(radiatorInputW, RADIATOR_TARGET_K);
-  const commandedAreaM2 = rocket.cruiseActive
+  const requiredAreaM2 = radiatorAreaForTarget(radiatorInputW, setting("radiatorTarget", RADIATOR_TARGET_K));
+  const commandedAreaM2 = rocket.leg?.encounter?.arc ? RADIATOR_AREA_MAX_M2 : rocket.cruiseActive
     ? clamp(requiredAreaM2, RADIATOR_AREA_MIN_M2, RADIATOR_AREA_MAX_M2)
     : RADIATOR_AREA_MIN_M2;
   const areaBlend = 1 - Math.exp(-Math.max(dt, 0) / (2 * 3600));
@@ -1548,14 +1615,14 @@ function updatePlasmaCircuit(dt, enabled, maximumThrustN = Infinity) {
   current1 = clamp(current1, 0, COIL_CURRENT_LIMIT_A);
 
   const magneticFieldT = MU0 * COIL_TURNS * current1 / COIL_LENGTH_M;
-  const thermalPowerLimitW = thermalElectricalPowerLimitW(current1);
-  const thermalVoltageLimitV = current1 > 1e-9 ? thermalPowerLimitW / current1 : 0;
+  const thermalPowerLimitW = thermalElectricalPowerLimitW(current1, rocket.leg?.encounter?.arc ? (rocket.radiatorAreaM2 ?? RADIATOR_AREA_MIN_M2) : RADIATOR_AREA_MAX_M2);
+  const thermalVoltageLimitV = current1 > 1e-9 ? thermalPowerLimitW / (current1 * engineCount()) : 0;
   const acceleratorVoltageV = Math.min(
-    PLASMA_ACCELERATOR_VOLTAGE_V * commandedThrottle,
+    voltageCeiling() * commandedThrottle,
     thermalVoltageLimitV,
-    current1 > 1e-9 ? maximumThrustN * PLASMA_EXHAUST_VELOCITY_M_S / (2 * PLASMA_EFFICIENCY * current1) : 0,
+    current1 > 1e-9 ? maximumThrustN * PLASMA_EXHAUST_VELOCITY_M_S / (2 * PLASMA_EFFICIENCY * current1 * engineCount()) : 0,
   ) * powerDerate;
-  const acceleratorPowerW = acceleratorVoltageV * current1;
+  const acceleratorPowerW = acceleratorVoltageV * current1 * engineCount();
   const ohmicLossW = current1 ** 2 * COIL_RESISTANCE_OHM;
   const beamPowerW = acceleratorPowerW * PLASMA_EFFICIENCY;
   const wasteHeatW = acceleratorPowerW * (1 - PLASMA_EFFICIENCY) + ohmicLossW;
@@ -1759,6 +1826,21 @@ const viewport = document.getElementById("viewport");
 const canvas = document.getElementById("sceneCanvas");
 const labelsLayer = document.getElementById("labels");
 const scene = new THREE.Scene();
+const plannedRouteLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineDashedMaterial({color:0x9ac8dc,dashSize:0.6,gapSize:0.3,transparent:true,opacity:0.7}));
+scene.add(plannedRouteLine);
+function updateRoutePreview(plan=null) {
+  if(!plan && rocket?.active) return;
+  const route=selectedRoute();
+  if(!plan && route.target!=="auto" && route.origin!==route.target) plan=poweredRoutePlan(route.origin,route.target);
+  const arc=plan?.encounters[0]?.arc;
+  plannedRouteLine.visible=Boolean(arc);
+  if(arc) {
+    const sun=getBody("Sol");
+    plannedRouteLine.geometry.setFromPoints(Array.from({length:129},(_,i)=>renderVector(arc.sample(arc.seconds*i/128).position.add(sun.position))));
+    plannedRouteLine.computeLineDistances();
+  }
+}
+
 scene.fog = new THREE.FogExp2(0x020407, 0.00014);
 
 const renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: true, powerPreference: "high-performance" });
@@ -2120,7 +2202,7 @@ function updateCamera() {
 }
 
 viewport.addEventListener("pointerdown", event => {
-  if (event.button !== 0) return;
+  if (event.button !== 0 || event.target.closest("button,input,select,label,.route-card,.stage-controls")) return;
   dragging = true;
   lastPointerX = event.clientX;
   lastPointerY = event.clientY;
@@ -2143,6 +2225,7 @@ viewport.addEventListener("pointerup", event => {
 });
 
 viewport.addEventListener("wheel", event => {
+  if(event.target.closest(".route-card,.stage-controls")) return;
   event.preventDefault();
   cameraDistance = clamp(cameraDistance * Math.exp(event.deltaY * 0.0012), 0.8, 800);
 }, { passive: false });
@@ -2307,6 +2390,13 @@ function projectRelativisticCruise(initialSpeed, distance, properAcceleration, b
 }
 
 function updateRelativisticClocks(vInfinity, solarDistance) {
+  if(rocket?.leg?.encounter?.arc) {
+    earthClockValue.textContent=formatElapsed(rocket.earthElapsedSeconds);
+    travelerClockValue.textContent=formatElapsed(rocket.travelerProperSeconds);
+    earthClockProjection.textContent=`${rocket.leg.targetName} · planned ${(rocket.leg.duration/DAY).toFixed(2)} days`;
+    travelerClockProjection.textContent="Planetary cruise · negligible time dilation";
+    return;
+  }
   if (!rocket) {
     earthClockValue.textContent = "0.000000 Earth yr";
     travelerClockValue.textContent = "0.000000 Earth yr";
@@ -2387,14 +2477,15 @@ function estimateRemainingAssistSeconds() {
 }
 
 function updateTelemetry() {
+  updateMissionSummary();
   const plasmaDemandW = rocket ? (rocket.acceleratorPowerW + rocket.ohmicLossW) : 0;
   const booster = rocket?.magnosBus ?? magnosBoosterForPlasma(plasmaDemandW);
   document.getElementById("magnosOutput").textContent = `${formatVoltage(booster.outputV)} · ${formatNumber(booster.outputA * 1000, 4)} mA · ${formatNumber(booster.outputW, 3)} W`;
-  document.getElementById("magnosInput").textContent = `5 V · ${formatNumber(booster.inputA, 3)} A · ${formatNumber(booster.lossW, 3)} W loss`;
+  document.getElementById("magnosInput").textContent = `5 V / 1 A input · ${booster.count} stages · ${formatNumber(booster.lossW, 3)} W loss`;
   document.getElementById("magnosStatus").textContent = rocket
     ? (booster.limited
-      ? "Feeding plasma coil / electrode drivers · 5 V·1 A ceiling"
-      : "Feeding plasma coil / electrode drivers")
+      ? "Auxiliary bank · power limited"
+      : "Auxiliary bank · separate from hypothetical drive source")
     : (booster.limited ? "Power limited · gain target unavailable" : "Standby · plasma load disconnected");
 
   const sun = getBody("Sol");
@@ -2610,7 +2701,26 @@ const earthClockProjection = document.getElementById("earthClockProjection");
 const travelerClockProjection = document.getElementById("travelerClockProjection");
 const relativityDelta = document.getElementById("relativityDelta");
 
+function updateMissionSummary() {
+  const drive=steadyPlasmaDrive();
+  const trip=interstellarEnvelope(ALPHA_TARGET_DISTANCE_M,drive.properAcceleration);
+  const summary=document.getElementById("missionFeasibility");
+  summary.textContent=trip ? `Alpha Cen A/B · 4.37 ly. Ideal flip-and-brake: ${(trip.earthSeconds/YEAR).toFixed(2)} Earth yr / ${(trip.travelerSeconds/YEAR).toFixed(2)} traveler yr. ${trip.travelerSeconds<2*YEAR ? "Under 2 traveler years in the ideal model only." : "Two-year traveler target not met."} Earth-time floor: 4.37 yr. Fuel inventory unmodeled.` : "No powered interstellar solution";
+  document.getElementById("engineBankStat").textContent=`${engineCount()} × ${formatVoltage(voltageCeiling())} ceiling`;
+  const bank=magnosBoosterForPlasma();
+  document.getElementById("bankSummary").textContent=`${bank.count} Magnos · ${bank.availableW.toFixed(0)} W shared output budget · target ${formatVoltage(bank.targetV)}. Drive source: hypothetical ${formatPower(drive.acceleratorPowerW)}; shared thermal limit.`;
+  const leg=rocket?.leg?.encounter;
+  document.getElementById("routeComparison").textContent=leg ? `${leg.method} · ${(leg.transferDuration/DAY).toFixed(1)} d · plasma Δv ${(leg.poweredDeltaV/1000).toFixed(1)} km/s · Hohmann baseline ${(leg.naturalTime/DAY).toFixed(1)} d (different arrival phase)` : "Tangent-matched plasma arcs · acceleration and braking included";
+  const brake=magneticBrake({densityKgM3:INTERSTELLAR_NUMBER_DENSITY_M3*PROTON_MASS_KG,speed:rocket?.modeledHeliocentricSpeed||0,areaM2:SHIELD_AREA_M2,fieldT:rocket?.coilFieldT||0});
+  document.getElementById("brakeSummary").textContent=brake.valid ? `Reverse plasma thrust for arrival. External-plasma magnetic drag upper bound: ${brake.forceN.toExponential(2)} N; diagnostic only.` : "Reverse plasma thrust for arrival. Classical magnetic-drag estimate invalid above 0.1c; excluded from flight.";
+  for(const id of ["routeOrigin","routeTarget","engineCountSlider","plasmaVoltageSlider","voltageScale","boosterCount","radiatorTarget"]) document.getElementById(id).disabled=Boolean(rocket?.active);
+}
+
 function syncControls() {
+  document.getElementById("engineCountValue").textContent=engineCount();
+  document.getElementById("plasmaVoltageValue").textContent=formatVoltage(voltageCeiling());
+  updateMissionSummary();
+  updateRoutePreview();
   simulationDaysPerSecond = 10 ** Number(speedSlider.value);
   speedValue.textContent = formatSimulationSpeed(simulationDaysPerSecond);
   injectionValue.textContent = `${formatNumber(Number(injectionSlider.value), 2)} km/s`;
@@ -2632,10 +2742,21 @@ playButton.addEventListener("click", () => {
 
 resetButton.addEventListener("click", () => {
   resetSimulation(new Date());
+  updateRoutePreview();
   setFocus("Earth", 28);
 });
 
+for(const id of ["routeOrigin","routeTarget"]) {
+  const select=document.getElementById(id);
+  for(const body of BODY_DEFINITIONS.filter(b=>b.elements)) {
+    const option=document.createElement("option"); option.value=body.name; option.textContent=body.name;select.append(option);
+  }
+  select.value=id==="routeOrigin" ? "Earth" : "Mars";
+}
+const autoOption=document.createElement("option");autoOption.value="auto";autoOption.textContent="Alpha Cen via automatic assists";document.getElementById("routeTarget").append(autoOption);
 launchButton.addEventListener("click", launchRocket);
+for(const id of ["engineCountSlider","plasmaVoltageSlider","voltageScale","boosterCount","radiatorTarget"]) document.getElementById(id).addEventListener("input",syncControls);
+for(const id of ["routeOrigin","routeTarget"]) document.getElementById(id).addEventListener("change",()=>{ updateMissionSummary(); updateRoutePreview(); });
 speedSlider.addEventListener("input", syncControls);
 injectionSlider.addEventListener("input", syncControls);
 flybySlider.addEventListener("input", syncControls);

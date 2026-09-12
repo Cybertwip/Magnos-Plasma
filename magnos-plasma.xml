@@ -2,7 +2,7 @@
 <export version="E">
   <design>
     <source>/Users/cybertwip/Projects/exp/solar_slingshot_minimal/magnos-plasma.kicad_sch</source>
-    <date>2026-09-12T15:41:42-0600</date>
+    <date>2026-09-12T17:05:03-0600</date>
     <tool>Eeschema 9.0.4</tool>
     <sheet number="1" name="/" tstamps="/">
       <title_block>
@@ -359,6 +359,19 @@
       <sheetpath names="/" tstamps="/"/>
       <tstamps>5f17287c-4809-585f-bc69-c2b7366e865c</tstamps>
     </comp>
+    <comp ref="H101">
+      <value>Engine chassis bond</value>
+      <fields>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="MagnosSystem" part="H101" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>a08796d6-c736-52d7-b019-63baf5949f6b</tstamps>
+    </comp>
     <comp ref="J1">
       <value>Input</value>
       <footprint>TerminalBlock_Phoenix:TerminalBlock_Phoenix_MKDS-1,5-2-5.08_1x02_P5.08mm_Horizontal</footprint>
@@ -549,6 +562,32 @@
       <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>55798c9a-f72b-59b3-8004-1c921039bc52</tstamps>
+    </comp>
+    <comp ref="J601">
+      <value>Valve feedthrough</value>
+      <fields>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="MagnosSystem" part="J601" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>10116379-1a0c-5737-9cf7-db266ba97dfc</tstamps>
+    </comp>
+    <comp ref="J602">
+      <value>Neutralizer feedthrough</value>
+      <fields>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="MagnosSystem" part="J602" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>bd8bb5c2-018b-576b-8e94-3604b7d73845</tstamps>
     </comp>
     <comp ref="L1">
       <value>1mH</value>
@@ -813,6 +852,32 @@
       <sheetpath names="/" tstamps="/"/>
       <tstamps>d9e79da6-c438-43e0-9009-d4de3d6ce4dd</tstamps>
     </comp>
+    <comp ref="T102">
+      <value>Shield sensor</value>
+      <fields>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="MagnosSystem" part="T102" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>c80e2a45-a686-5aef-b477-4ca02521462d</tstamps>
+    </comp>
+    <comp ref="T103">
+      <value>Engine sensor</value>
+      <fields>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="MagnosSystem" part="T103" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>897c72b9-48df-59f8-8049-61c22f702016</tstamps>
+    </comp>
     <comp ref="TP101">
       <value>HV differential monitor / isolation TBD</value>
       <fields>
@@ -952,6 +1017,19 @@
       <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
       <sheetpath names="/" tstamps="/"/>
       <tstamps>73a621d1-481c-510b-8e45-064b5b4295ce</tstamps>
+    </comp>
+    <comp ref="U701">
+      <value>Magnos isolated booster 1/1; target 1e+07 V / TBD</value>
+      <fields>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <libsource lib="MagnosSystem" part="U701" description=""/>
+      <property name="Sheetname" value=""/>
+      <property name="Sheetfile" value="magnos-plasma.kicad_sch"/>
+      <sheetpath names="/" tstamps="/"/>
+      <tstamps>fe10a7f8-fe30-58ed-abae-ac4b6b9ad83e</tstamps>
     </comp>
     <comp ref="Y2">
       <value>2500Hz</value>
@@ -1339,6 +1417,19 @@
         <pin num="2" name="2" type="passive"/>
       </pins>
     </libpart>
+    <libpart lib="MagnosSystem" part="H101">
+      <fields>
+        <field name="Reference">H101</field>
+        <field name="Value">Engine chassis bond</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <pins>
+        <pin num="1" name="1" type="passive"/>
+        <pin num="2" name="2" type="passive"/>
+      </pins>
+    </libpart>
     <libpart lib="MagnosSystem" part="J101">
       <fields>
         <field name="Reference">J101</field>
@@ -1459,6 +1550,32 @@
         <pin num="2" name="RETURN" type="passive"/>
       </pins>
     </libpart>
+    <libpart lib="MagnosSystem" part="J601">
+      <fields>
+        <field name="Reference">J601</field>
+        <field name="Value">Valve feedthrough</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <pins>
+        <pin num="1" name="POS" type="passive"/>
+        <pin num="2" name="RETURN" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="MagnosSystem" part="J602">
+      <fields>
+        <field name="Reference">J602</field>
+        <field name="Value">Neutralizer feedthrough</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <pins>
+        <pin num="1" name="POS" type="passive"/>
+        <pin num="2" name="RETURN" type="passive"/>
+      </pins>
+    </libpart>
     <libpart lib="MagnosSystem" part="L201">
       <fields>
         <field name="Reference">L201</field>
@@ -1561,6 +1678,34 @@
       <pins>
         <pin num="1" name="1" type="passive"/>
         <pin num="2" name="2" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="MagnosSystem" part="T102">
+      <fields>
+        <field name="Reference">T102</field>
+        <field name="Value">Shield sensor</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <pins>
+        <pin num="1" name="VCC" type="passive"/>
+        <pin num="2" name="RETURN" type="passive"/>
+        <pin num="3" name="SIGNAL" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="MagnosSystem" part="T103">
+      <fields>
+        <field name="Reference">T103</field>
+        <field name="Value">Engine sensor</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <pins>
+        <pin num="1" name="VCC" type="passive"/>
+        <pin num="2" name="RETURN" type="passive"/>
+        <pin num="3" name="SIGNAL" type="passive"/>
       </pins>
     </libpart>
     <libpart lib="MagnosSystem" part="TP101">
@@ -1693,6 +1838,23 @@
         <pin num="1" name="IN+" type="passive"/>
         <pin num="2" name="IN-" type="passive"/>
         <pin num="3" name="CTRL" type="passive"/>
+        <pin num="4" name="CTRL_RTN" type="passive"/>
+        <pin num="5" name="OUT+" type="passive"/>
+        <pin num="6" name="OUT-" type="passive"/>
+      </pins>
+    </libpart>
+    <libpart lib="MagnosSystem" part="U701">
+      <fields>
+        <field name="Reference">U701</field>
+        <field name="Value">Magnos isolated booster 1/1; target 1e+07 V / TBD</field>
+        <field name="Footprint"/>
+        <field name="Datasheet"/>
+        <field name="Description"/>
+      </fields>
+      <pins>
+        <pin num="1" name="IN+" type="passive"/>
+        <pin num="2" name="IN-" type="passive"/>
+        <pin num="3" name="ENABLE" type="passive"/>
         <pin num="4" name="CTRL_RTN" type="passive"/>
         <pin num="5" name="OUT+" type="passive"/>
         <pin num="6" name="OUT-" type="passive"/>
@@ -1876,6 +2038,8 @@
       <node ref="J4" pin="1" pinfunction="Pin_1" pintype="passive"/>
     </net>
     <net code="5" name="/CHASSIS" class="Default">
+      <node ref="H101" pin="1" pinfunction="1" pintype="passive"/>
+      <node ref="H101" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="J101" pin="3" pinfunction="CHASSIS" pintype="passive"/>
       <node ref="J104" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="J104" pin="2" pinfunction="2" pintype="passive"/>
@@ -1903,48 +2067,59 @@
       <node ref="R101" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="S104" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="U101" pin="3" pinfunction="ENABLE" pintype="passive"/>
+      <node ref="U701" pin="3" pinfunction="ENABLE" pintype="passive"/>
     </net>
     <net code="11" name="/ESTOP_OK" class="Default">
       <node ref="S102" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="S103" pin="1" pinfunction="1" pintype="passive"/>
     </net>
     <net code="12" name="/GAS_N" class="Default">
+      <node ref="J601" pin="2" pinfunction="RETURN" pintype="passive"/>
       <node ref="U601" pin="5" pinfunction="OUT-" pintype="passive"/>
       <node ref="Y601" pin="2" pinfunction="2" pintype="passive"/>
     </net>
     <net code="13" name="/GAS_P" class="Default">
+      <node ref="J601" pin="1" pinfunction="POS" pintype="passive"/>
       <node ref="U601" pin="4" pinfunction="OUT+" pintype="passive"/>
       <node ref="Y601" pin="1" pinfunction="1" pintype="passive"/>
     </net>
     <net code="14" name="/HV_BUS_P" class="Default">
       <node ref="C101" pin="1" pinfunction="1" pintype="passive"/>
-      <node ref="F102" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="F401" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="F501" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="R102" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="TP101" pin="1" pinfunction="IN+" pintype="passive"/>
       <node ref="U602" pin="1" pinfunction="IN+" pintype="passive"/>
+      <node ref="U701" pin="5" pinfunction="OUT+" pintype="passive"/>
     </net>
-    <net code="15" name="/HV_RAW_P" class="Default">
+    <net code="15" name="/HV_PREBOOST_P" class="Default">
+      <node ref="F102" pin="2" pinfunction="2" pintype="passive"/>
+      <node ref="U701" pin="1" pinfunction="IN+" pintype="passive"/>
+    </net>
+    <net code="16" name="/HV_RAW_P" class="Default">
       <node ref="D101" pin="2" pinfunction="K" pintype="passive"/>
       <node ref="D102" pin="2" pinfunction="K" pintype="passive"/>
       <node ref="F102" pin="1" pinfunction="1" pintype="passive"/>
     </net>
-    <net code="16" name="/HV_RETURN" class="Default">
-      <node ref="C101" pin="2" pinfunction="2" pintype="passive"/>
+    <net code="17" name="/HV_RETURN" class="Default">
       <node ref="D103" pin="1" pinfunction="A" pintype="passive"/>
       <node ref="D104" pin="1" pinfunction="A" pintype="passive"/>
+      <node ref="U701" pin="2" pinfunction="IN-" pintype="passive"/>
+    </net>
+    <net code="18" name="/HV_SENSE" class="Default">
+      <node ref="J105" pin="1" pinfunction="HV_SENSE" pintype="passive"/>
+      <node ref="TP101" pin="4" pinfunction="OUT" pintype="passive"/>
+    </net>
+    <net code="19" name="/HV_STACK_RETURN" class="Default">
+      <node ref="C101" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="R102" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="TP101" pin="2" pinfunction="IN-" pintype="passive"/>
       <node ref="U401" pin="2" pinfunction="IN-" pintype="passive"/>
       <node ref="U501" pin="2" pinfunction="IN-" pintype="passive"/>
       <node ref="U602" pin="2" pinfunction="IN-" pintype="passive"/>
+      <node ref="U701" pin="6" pinfunction="OUT-" pintype="passive"/>
     </net>
-    <net code="17" name="/HV_SENSE" class="Default">
-      <node ref="J105" pin="1" pinfunction="HV_SENSE" pintype="passive"/>
-      <node ref="TP101" pin="4" pinfunction="OUT" pintype="passive"/>
-    </net>
-    <net code="18" name="/INPUT_5V" class="Default">
+    <net code="20" name="/INPUT_5V" class="Default">
       <node ref="C6" pin="1" pintype="passive"/>
       <node ref="D7" pin="2" pinfunction="A" pintype="passive"/>
       <node ref="J1" pin="1" pinfunction="Pin_1" pintype="passive"/>
@@ -1952,6 +2127,8 @@
       <node ref="J103" pin="1" pinfunction="VCC" pintype="passive"/>
       <node ref="S101" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="S102" pin="1" pinfunction="1" pintype="passive"/>
+      <node ref="T102" pin="1" pinfunction="VCC" pintype="passive"/>
+      <node ref="T103" pin="1" pinfunction="VCC" pintype="passive"/>
       <node ref="U101" pin="1" pinfunction="VCC" pintype="passive"/>
       <node ref="U601" pin="1" pinfunction="VCC" pintype="passive"/>
       <node ref="Y2" pin="14" pinfunction="Vcc" pintype="power_in"/>
@@ -1959,7 +2136,7 @@
       <node ref="Y4" pin="14" pinfunction="Vcc" pintype="power_in"/>
       <node ref="Y5" pin="14" pinfunction="Vcc" pintype="power_in"/>
     </net>
-    <net code="19" name="/INPUT_RETURN" class="Default">
+    <net code="21" name="/INPUT_RETURN" class="Default">
       <node ref="C6" pin="2" pintype="passive"/>
       <node ref="C8" pin="2" pintype="passive"/>
       <node ref="J1" pin="2" pinfunction="Pin_2" pintype="passive"/>
@@ -1972,6 +2149,8 @@
       <node ref="Q8" pin="3" pinfunction="E" pintype="open_emitter"/>
       <node ref="R101" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="T1" pin="1" pinfunction="AA" pintype="passive"/>
+      <node ref="T102" pin="2" pinfunction="RETURN" pintype="passive"/>
+      <node ref="T103" pin="2" pinfunction="RETURN" pintype="passive"/>
       <node ref="TP101" pin="3" pinfunction="LV_GND" pintype="passive"/>
       <node ref="U101" pin="2" pinfunction="GND" pintype="passive"/>
       <node ref="U201" pin="4" pinfunction="CTRL_RTN" pintype="passive"/>
@@ -1980,182 +2159,187 @@
       <node ref="U501" pin="4" pinfunction="CTRL_RTN" pintype="passive"/>
       <node ref="U601" pin="2" pinfunction="GND" pintype="passive"/>
       <node ref="U602" pin="4" pinfunction="CTRL_RTN" pintype="passive"/>
+      <node ref="U701" pin="4" pinfunction="CTRL_RTN" pintype="passive"/>
       <node ref="Y2" pin="7" pinfunction="GND" pintype="power_in"/>
       <node ref="Y3" pin="7" pinfunction="GND" pintype="power_in"/>
       <node ref="Y4" pin="7" pinfunction="GND" pintype="power_in"/>
     </net>
-    <net code="20" name="/NEUT_N" class="Default">
+    <net code="22" name="/NEUT_N" class="Default">
+      <node ref="J602" pin="2" pinfunction="RETURN" pintype="passive"/>
       <node ref="U602" pin="6" pinfunction="OUT-" pintype="passive"/>
       <node ref="Z601" pin="2" pinfunction="2" pintype="passive"/>
     </net>
-    <net code="21" name="/NEUT_P" class="Default">
+    <net code="23" name="/NEUT_P" class="Default">
+      <node ref="J602" pin="1" pinfunction="POS" pintype="passive"/>
       <node ref="U602" pin="5" pinfunction="OUT+" pintype="passive"/>
       <node ref="Z601" pin="1" pinfunction="1" pintype="passive"/>
     </net>
-    <net code="22" name="/PR_COIL_N" class="Default">
+    <net code="24" name="/PR_COIL_N" class="Default">
       <node ref="J301" pin="2" pinfunction="RETURN" pintype="passive"/>
       <node ref="L301" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="U301" pin="6" pinfunction="OUT-" pintype="passive"/>
     </net>
-    <net code="23" name="/PR_COIL_P" class="Default">
+    <net code="25" name="/PR_COIL_P" class="Default">
       <node ref="J301" pin="1" pinfunction="POS" pintype="passive"/>
       <node ref="L301" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="U301" pin="5" pinfunction="OUT+" pintype="passive"/>
     </net>
-    <net code="24" name="/PR_DC_IN" class="Default">
+    <net code="26" name="/PR_DC_IN" class="Default">
       <node ref="F301" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="U301" pin="1" pinfunction="IN+" pintype="passive"/>
     </net>
-    <net code="25" name="/PR_ELECTRODE_N" class="Default">
+    <net code="27" name="/PR_ELECTRODE_N" class="Default">
       <node ref="J501" pin="2" pinfunction="RETURN" pintype="passive"/>
       <node ref="U501" pin="6" pinfunction="OUT-" pintype="passive"/>
       <node ref="Z501" pin="2" pinfunction="2" pintype="passive"/>
     </net>
-    <net code="26" name="/PR_ELECTRODE_P" class="Default">
+    <net code="28" name="/PR_ELECTRODE_P" class="Default">
       <node ref="J501" pin="1" pinfunction="POS" pintype="passive"/>
       <node ref="U501" pin="5" pinfunction="OUT+" pintype="passive"/>
       <node ref="Z501" pin="1" pinfunction="1" pintype="passive"/>
     </net>
-    <net code="27" name="/PR_HV_IN" class="Default">
+    <net code="29" name="/PR_HV_IN" class="Default">
       <node ref="F501" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="U501" pin="1" pinfunction="IN+" pintype="passive"/>
     </net>
-    <net code="28" name="/PR_TEMP" class="Default">
+    <net code="30" name="/PR_TEMP" class="Default">
       <node ref="J103" pin="3" pinfunction="SIGNAL" pintype="passive"/>
+      <node ref="T103" pin="3" pinfunction="SIGNAL" pintype="passive"/>
       <node ref="U101" pin="5" pinfunction="PR_TEMP" pintype="passive"/>
     </net>
-    <net code="29" name="/PWR_FUSED" class="Default">
+    <net code="31" name="/PWR_FUSED" class="Default">
       <node ref="F101" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="S101" pin="1" pinfunction="1" pintype="passive"/>
     </net>
-    <net code="30" name="/PWR_RAW" class="Default">
+    <net code="32" name="/PWR_RAW" class="Default">
       <node ref="F101" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="J101" pin="1" pinfunction="+" pintype="passive"/>
     </net>
-    <net code="31" name="/SH_COIL_N" class="Default">
+    <net code="33" name="/SH_COIL_N" class="Default">
       <node ref="J201" pin="2" pinfunction="RETURN" pintype="passive"/>
       <node ref="L201" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="U201" pin="6" pinfunction="OUT-" pintype="passive"/>
     </net>
-    <net code="32" name="/SH_COIL_P" class="Default">
+    <net code="34" name="/SH_COIL_P" class="Default">
       <node ref="J201" pin="1" pinfunction="POS" pintype="passive"/>
       <node ref="L201" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="U201" pin="5" pinfunction="OUT+" pintype="passive"/>
     </net>
-    <net code="33" name="/SH_DC_IN" class="Default">
+    <net code="35" name="/SH_DC_IN" class="Default">
       <node ref="F201" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="U201" pin="1" pinfunction="IN+" pintype="passive"/>
     </net>
-    <net code="34" name="/SH_ELECTRODE_N" class="Default">
+    <net code="36" name="/SH_ELECTRODE_N" class="Default">
       <node ref="J401" pin="2" pinfunction="RETURN" pintype="passive"/>
       <node ref="U401" pin="6" pinfunction="OUT-" pintype="passive"/>
       <node ref="Z401" pin="2" pinfunction="2" pintype="passive"/>
     </net>
-    <net code="35" name="/SH_ELECTRODE_P" class="Default">
+    <net code="37" name="/SH_ELECTRODE_P" class="Default">
       <node ref="J401" pin="1" pinfunction="POS" pintype="passive"/>
       <node ref="U401" pin="5" pinfunction="OUT+" pintype="passive"/>
       <node ref="Z401" pin="1" pinfunction="1" pintype="passive"/>
     </net>
-    <net code="36" name="/SH_HV_IN" class="Default">
+    <net code="38" name="/SH_HV_IN" class="Default">
       <node ref="F401" pin="2" pinfunction="2" pintype="passive"/>
       <node ref="U401" pin="1" pinfunction="IN+" pintype="passive"/>
     </net>
-    <net code="37" name="/SH_TEMP" class="Default">
+    <net code="39" name="/SH_TEMP" class="Default">
       <node ref="J102" pin="3" pinfunction="SIGNAL" pintype="passive"/>
+      <node ref="T102" pin="3" pinfunction="SIGNAL" pintype="passive"/>
       <node ref="U101" pin="4" pinfunction="SH_TEMP" pintype="passive"/>
     </net>
-    <net code="38" name="Net-(C9-Pad1)" class="Default">
+    <net code="40" name="Net-(C9-Pad1)" class="Default">
       <node ref="C9" pin="1" pintype="passive"/>
       <node ref="TR3" pin="4" pintype="passive"/>
     </net>
-    <net code="39" name="Net-(C10-Pad1)" class="Default">
+    <net code="41" name="Net-(C10-Pad1)" class="Default">
       <node ref="C10" pin="1" pintype="passive"/>
       <node ref="R1" pin="2" pintype="passive"/>
     </net>
-    <net code="40" name="Net-(C10-Pad2)" class="Default">
+    <net code="42" name="Net-(C10-Pad2)" class="Default">
       <node ref="C10" pin="2" pintype="passive"/>
       <node ref="C8" pin="1" pintype="passive"/>
     </net>
-    <net code="41" name="Net-(D1-A)" class="Default">
+    <net code="43" name="Net-(D1-A)" class="Default">
       <node ref="D1" pin="2" pinfunction="A" pintype="passive"/>
       <node ref="L1" pin="1" pinfunction="1" pintype="passive"/>
       <node ref="Q2" pin="1" pinfunction="C" pintype="open_collector"/>
     </net>
-    <net code="42" name="Net-(D1-K)" class="Default">
+    <net code="44" name="Net-(D1-K)" class="Default">
       <node ref="D1" pin="1" pinfunction="K" pintype="passive"/>
       <node ref="R1" pin="1" pintype="passive"/>
     </net>
-    <net code="43" name="Net-(D9-A)" class="Default">
+    <net code="45" name="Net-(D9-A)" class="Default">
       <node ref="D9" pin="2" pinfunction="A" pintype="passive"/>
       <node ref="Y3" pin="8" pinfunction="OUT" pintype="output"/>
     </net>
-    <net code="44" name="Net-(D9-K)" class="Default">
+    <net code="46" name="Net-(D9-K)" class="Default">
       <node ref="D9" pin="1" pinfunction="K" pintype="passive"/>
       <node ref="Q8" pin="2" pinfunction="B" pintype="input"/>
     </net>
-    <net code="45" name="Net-(D10-K)" class="Default">
+    <net code="47" name="Net-(D10-K)" class="Default">
       <node ref="D10" pin="1" pinfunction="K" pintype="passive"/>
       <node ref="D7" pin="1" pinfunction="K" pintype="passive"/>
       <node ref="L1" pin="2" pinfunction="2" pintype="passive"/>
     </net>
-    <net code="46" name="Net-(Q2-B)" class="Default">
+    <net code="48" name="Net-(Q2-B)" class="Default">
       <node ref="Q2" pin="2" pinfunction="B" pintype="input"/>
       <node ref="Y4" pin="8" pinfunction="OUT" pintype="output"/>
     </net>
-    <net code="47" name="Net-(Q5-B)" class="Default">
+    <net code="49" name="Net-(Q5-B)" class="Default">
       <node ref="Q5" pin="2" pinfunction="B" pintype="input"/>
       <node ref="Y2" pin="8" pinfunction="OUT" pintype="output"/>
     </net>
-    <net code="48" name="Net-(Q5-C)" class="Default">
+    <net code="50" name="Net-(Q5-C)" class="Default">
       <node ref="Q5" pin="1" pinfunction="C" pintype="open_collector"/>
       <node ref="T2" pin="1" pinfunction="AA" pintype="passive"/>
     </net>
-    <net code="49" name="Net-(T1-AB)" class="Default">
+    <net code="51" name="Net-(T1-AB)" class="Default">
       <node ref="T1" pin="2" pinfunction="AB" pintype="passive"/>
       <node ref="T2" pin="2" pinfunction="AB" pintype="passive"/>
     </net>
-    <net code="50" name="Net-(T1-SA)" class="Default">
+    <net code="52" name="Net-(T1-SA)" class="Default">
       <node ref="T1" pin="3" pinfunction="SA" pintype="passive"/>
       <node ref="U1" pin="1" pintype="passive"/>
     </net>
-    <net code="51" name="Net-(T1-SB)" class="Default">
+    <net code="53" name="Net-(T1-SB)" class="Default">
       <node ref="C9" pin="2" pintype="passive"/>
       <node ref="T1" pin="4" pinfunction="SB" pintype="passive"/>
     </net>
-    <net code="52" name="Net-(T1-SC)" class="Default">
+    <net code="54" name="Net-(T1-SC)" class="Default">
       <node ref="T1" pin="5" pinfunction="SC" pintype="passive"/>
       <node ref="TR3" pin="3" pintype="passive"/>
     </net>
-    <net code="53" name="Net-(T1-SD)" class="Default">
+    <net code="55" name="Net-(T1-SD)" class="Default">
       <node ref="T1" pin="6" pinfunction="SD" pintype="passive"/>
       <node ref="T2" pin="3" pinfunction="SA" pintype="passive"/>
     </net>
-    <net code="54" name="Net-(T2-SB)" class="Default">
+    <net code="56" name="Net-(T2-SB)" class="Default">
       <node ref="T2" pin="4" pinfunction="SB" pintype="passive"/>
       <node ref="T2" pin="5" pinfunction="SC" pintype="passive"/>
     </net>
-    <net code="55" name="Net-(T2-SD)" class="Default">
+    <net code="57" name="Net-(T2-SD)" class="Default">
       <node ref="T2" pin="6" pinfunction="SD" pintype="passive"/>
       <node ref="TR3" pin="2" pintype="passive"/>
     </net>
-    <net code="56" name="Net-(Y5-GND)" class="Default">
+    <net code="58" name="Net-(Y5-GND)" class="Default">
       <node ref="U1" pin="4" pintype="passive"/>
       <node ref="Y5" pin="7" pinfunction="GND" pintype="power_in"/>
     </net>
-    <net code="57" name="Net-(Y5-OUT)" class="Default">
+    <net code="59" name="Net-(Y5-OUT)" class="Default">
       <node ref="U1" pin="3" pintype="passive"/>
       <node ref="Y5" pin="8" pinfunction="OUT" pintype="output"/>
     </net>
-    <net code="58" name="unconnected-(Y2-NC-Pad1)" class="Default">
+    <net code="60" name="unconnected-(Y2-NC-Pad1)" class="Default">
       <node ref="Y2" pin="1" pinfunction="NC" pintype="no_connect"/>
     </net>
-    <net code="59" name="unconnected-(Y3-NC-Pad1)" class="Default">
+    <net code="61" name="unconnected-(Y3-NC-Pad1)" class="Default">
       <node ref="Y3" pin="1" pinfunction="NC" pintype="no_connect"/>
     </net>
-    <net code="60" name="unconnected-(Y4-NC-Pad1)" class="Default">
+    <net code="62" name="unconnected-(Y4-NC-Pad1)" class="Default">
       <node ref="Y4" pin="1" pinfunction="NC" pintype="no_connect"/>
     </net>
-    <net code="61" name="unconnected-(Y5-NC-Pad1)" class="Default">
+    <net code="63" name="unconnected-(Y5-NC-Pad1)" class="Default">
       <node ref="Y5" pin="1" pinfunction="NC" pintype="no_connect"/>
     </net>
   </nets>

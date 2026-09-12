@@ -8,12 +8,21 @@ where this sheet must join the original beta connectors.
 Power converters / interlocks are functional blocks, not designed PCBs.
 """
 from pathlib import Path
+import argparse
+import shutil
+import subprocess
+import xml.etree.ElementTree as ET
 import json
 import math
 import re
 import uuid
 
 ROOT = Path(__file__).resolve().parent
+parser = argparse.ArgumentParser(description=__doc__)
+parser.add_argument('--boosters', type=int, choices=range(1,9), default=1)
+parser.add_argument('--voltage-scale', choices=['MV','GV','TV'], default='MV')
+args = parser.parse_args()
+target_voltage = 10 * {'MV':1e6,'GV':1e9,'TV':1e12}[args.voltage_scale]
 G = 1.27  # KiCad connection grid, millimetres
 
 
@@ -47,7 +56,7 @@ def children(n, key):
 
 
 def dump(n):
-    return '(' + ' '.join(dump(x) if isinstance(x, list) else x for x in n) + ')'
+    return '(' + '\n'.join(dump(x) if isinstance(x, list) else x for x in n) + ')'
 
 
 def q(s):
@@ -319,11 +328,11 @@ diode('D101', 'HV diode - rating TBD', 'BOOST_AC_A', 'HV_RAW_P', grid(340), grid
 diode('D102', 'HV diode - rating TBD', 'BOOST_AC_B', 'HV_RAW_P', grid(400), grid(122))
 diode('D103', 'HV diode - rating TBD', 'HV_RETURN', 'BOOST_AC_A', grid(340), grid(146))
 diode('D104', 'HV diode - rating TBD', 'HV_RETURN', 'BOOST_AC_B', grid(400), grid(146))
-two('F102', 'HV fuse - rating TBD', 'HV_RAW_P', 'HV_BUS_P', grid(460), grid(122))
+two('F102', 'HV fuse - rating TBD', 'HV_RAW_P', 'HV_PREBOOST_P', grid(460), grid(122))
 two('C101', 'DC-link capacitor - C/V TBD', 'HV_BUS_P', 'HV_RETURN', grid(340), grid(170))
 two('R102', 'Permanent discharge resistor - TBD', 'HV_BUS_P', 'HV_RETURN', grid(400), grid(170))
 block('TP101', 'HV differential monitor / isolation TBD',
-      [('IN+', 'HV_BUS_P', 'L'), ('IN-', 'HV_RETURN', 'L'),
+      [('IN+', 'HV_BUS_P', 'L'), ('IN-', 'HV_STACK_RETURN', 'L'),
        ('LV_GND', 'INPUT_RETURN', 'R'), ('OUT', 'HV_SENSE', 'R')],
       grid(460), grid(170))
 block('J105', 'Service monitor',
@@ -359,10 +368,10 @@ power_channel('201', grid(210), 'SH_DC_IN', 'BOOST_DC_N', 'CMD_SH',
 power_channel('301', grid(260), 'PR_DC_IN', 'BOOST_DC_N', 'CMD_PR',
               'PR_COIL_P', 'PR_COIL_N', 'L301', 'Propulsor coil 50 H / 0.004 ohm model',
               'BOOST_DC_P', 'PR two-pin coil connector')
-power_channel('401', grid(310), 'SH_HV_IN', 'HV_RETURN', 'CMD_SH',
+power_channel('401', grid(310), 'SH_HV_IN', 'HV_STACK_RETURN', 'CMD_SH',
               'SH_ELECTRODE_P', 'SH_ELECTRODE_N', 'Z401', 'Shield electrodes / plasma load',
               'HV_BUS_P', 'Two-pin HV feedthrough')
-power_channel('501', grid(360), 'PR_HV_IN', 'HV_RETURN', 'CMD_PR',
+power_channel('501', grid(360), 'PR_HV_IN', 'HV_STACK_RETURN', 'CMD_PR',
               'PR_ELECTRODE_P', 'PR_ELECTRODE_N', 'Z501', 'Propulsor anode / cathode plasma load',
               'HV_BUS_P', 'Two-pin HV feedthrough')
 
@@ -373,7 +382,7 @@ block('U601', 'Gas valve driver + flyback / TBD',
       grid(330), grid(410))
 two('Y601', 'Injection valve - rating TBD', 'GAS_P', 'GAS_N', grid(410), grid(410))
 block('U602', 'Isolated neutralizer supply / TBD',
-      [('IN+', 'HV_BUS_P', 'L'), ('IN-', 'HV_RETURN', 'L'),
+      [('IN+', 'HV_BUS_P', 'L'), ('IN-', 'HV_STACK_RETURN', 'L'),
        ('CTRL', 'CMD_PR', 'L'), ('CTRL_RTN', 'INPUT_RETURN', 'L'),
        ('OUT+', 'NEUT_P', 'R'), ('OUT-', 'NEUT_N', 'R')],
       grid(480), grid(410))
@@ -382,6 +391,36 @@ join('U601', '4', 'Y601', '1', 'gasp')
 join('U601', '5', 'Y601', '2', 'gasn')
 join('U602', '5', 'Z601', '1', 'neutp')
 join('U602', '6', 'Z601', '2', 'neutn')
+
+# Cascaded functional converters: same input power, independent floating HV
+# output domains. These blocks do not claim the beta parts are MV/GV/TV rated.
+previous_p, previous_n = 'HV_PREBOOST_P', 'HV_RETURN'
+for i in range(args.boosters):
+    last = i == args.boosters - 1
+    out_p = 'HV_BUS_P' if last else f'STAGE_{i+1}_P'
+    out_n = 'HV_STACK_RETURN' if last else f'STAGE_{i+1}_N'
+    block(f'U{701+i}', f'Magnos isolated booster {i+1}/{args.boosters}; target {target_voltage**((i+1)/args.boosters):.3g} V / TBD',
+          [('IN+',previous_p,'L'),('IN-',previous_n,'L'),
+           ('ENABLE','ENABLE','L'),('CTRL_RTN','INPUT_RETURN','L'),
+           ('OUT+',out_p,'R'),('OUT-',out_n,'R')], grid(620),grid(120+i*38))
+    previous_p, previous_n = out_p, out_n
+# The rectifier return stays upstream; all final HV loads use the final return.
+# Reassign already-created capacitor, bleed and differential monitor pins.
+for ref in ('C101','R102','TP101'):
+    old = next(b for b in blocks if b['reference']==ref)
+    # Net labels are the electrical connection for these distant branches.
+    old['pins']['2']['net'] = 'HV_STACK_RETURN'
+    px,py = stub_end(ref,'2')
+    for label in children(root,'label'):
+        if label[1]=='"HV_RETURN"' and tuple(map(float,child(label,'at')[1:3]))==(px,py):
+            label[1]='"HV_STACK_RETURN"'
+
+block('J601','Valve feedthrough',[('POS','GAS_P','L'),('RETURN','GAS_N','L')],grid(620),grid(430))
+block('J602','Neutralizer feedthrough',[('POS','NEUT_P','L'),('RETURN','NEUT_N','L')],grid(660),grid(430))
+block('T102','Shield sensor',[('VCC','INPUT_5V','L'),('RETURN','INPUT_RETURN','L'),('SIGNAL','SH_TEMP','R')],grid(620),grid(470))
+block('T103','Engine sensor',[('VCC','INPUT_5V','L'),('RETURN','INPUT_RETURN','L'),('SIGNAL','PR_TEMP','R')],grid(660),grid(470))
+two('H101','Engine chassis bond','CHASSIS','CHASSIS',grid(700),grid(470))
+note(f'CASCADED MAGNOS: {args.boosters} stage(s), {target_voltage:.3g} V target. 5 W source; 80% assumed per stage; no power multiplication.',grid(450),grid(485))
 
 # Tap Magnos J3/J4/J1 on copper offset from the pin numbers. Long runs
 # through the original drawing short the paired connector pins. Plasma-side
@@ -402,39 +441,86 @@ note('Magnos J3 AC output is wired to the HV rectifier; J4 DC output is wired to
 note('TBD means not specified by source. This is a wired functional architecture, not a fabrication-ready design.', grid(400), grid(452))
 
 (ROOT / 'magnos-plasma.kicad_sch').write_text(dump(root) + '\n')
-(ROOT / 'magnos-plasma-wiring.json').write_text(
-    json.dumps({'source': str(source.relative_to(ROOT)), 'blocks': blocks}, indent=2) + '\n'
-)
-
-# Match cable endpoints to the conceptual assembly. Millimetres.
-paths = [
-    ('SH_COIL_P', [0.9, 0.3, 0.1], [[1310, 0, 2020], [1400, 0, 2500], [1400, 0, 5700], [7300, 0, 5900]]),
-    ('SH_COIL_N', [0.1, 0.1, 0.2], [[1320, 20, 2020], [1450, 50, 2500], [1450, 50, 5700], [7300, 100, 5900]]),
-    ('SH_ELECTRODE_P', [1, 0.6, 0], [[1340, 40, 2020], [1600, 150, 2500], [1600, 150, 6250], [7200, 150, 6250]]),
-    ('SH_ELECTRODE_N', [0.5, 0.2, 0.8], [[1350, 60, 2020], [1650, 220, 2500], [1650, 220, 6250], [7150, 220, 6250]]),
-    ('PR_COIL_P', [0.9, 0.3, 0.1], [[1310, 0, 2010], [1400, -100, 500], [980, -100, -1200]]),
-    ('PR_COIL_N', [0.1, 0.1, 0.2], [[1320, 20, 2010], [1450, -50, 500], [980, -50, -1250]]),
-    ('PR_ELECTRODE_P', [1, 0.6, 0], [[1340, 40, 2010], [1600, 150, 0], [700, 150, -2400]]),
-    ('PR_ELECTRODE_N', [0.5, 0.2, 0.8], [[1350, 60, 2010], [1650, 220, 0], [700, 220, -2500]]),
-    ('NEUT_P', [1, 0.6, 0], [[1350, 80, 2010], [1900, 300, 0], [1900, 0, -3500]]),
-    ('NEUT_N', [0.5, 0.2, 0.8], [[1360, 90, 2010], [1950, 350, 0], [1950, 0, -3500]]),
-    ('SH_TEMP', [0.2, 0.8, 0.4], [[1360, 100, 2020], [1700, 350, 2500], [1700, 350, 6000], [7000, 350, 6000]]),
-    ('PR_TEMP', [0.2, 0.8, 0.4], [[1370, 110, 2010], [1700, 350, 0], [1000, 350, -1200]]),
-    ('GAS_P', [0.2, 0.5, 1], [[1380, 120, 2010], [1800, 500, 1000], [950, 500, 0]]),
-    ('GAS_N', [0.1, 0.2, 0.5], [[1390, 130, 2010], [1850, 550, 1000], [950, 550, 0]]),
-]
-scad = '''// Generated functional cable routing, millimetres. NOT insulation/ampacity routing.
-// Cable diameter exaggerated to 36 mm for full-vehicle visibility.
-// Control/return bundles carry additional pins per magnos-plasma-wiring.json.
-module cable(points,r=18) { for(i=[0:len(points)-2]) hull() {
- translate(points[i]) sphere(r=r,$fn=12);
- translate(points[i+1]) sphere(r=r,$fn=12);
+# Export actual KiCad connectivity, including every original beta component.
+cli = shutil.which('kicad-cli') or '/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli'
+subprocess.run([cli,'sch','export','netlist','--format','kicadxml',str(ROOT/'magnos-plasma.kicad_sch'),'-o',str(ROOT/'magnos-plasma.xml')],check=True,capture_output=True)
+netlist=ET.parse(ROOT/'magnos-plasma.xml')
+components=[{'reference':c.get('ref'),'value':c.findtext('value')} for c in netlist.findall('./components/comp')]
+nets=[{'name':n.get('name').removeprefix('/'),'pins':[[p.get('ref'),p.get('pin')] for p in n.findall('node')]} for n in netlist.findall('./nets/net')]
+# Explicit cable per connector pin, including sensor VCC and return. Engine
+# model contains ONLY these boundary cables, never box-internal wiring.
+harness=[]
+for connector,load in [('J201','L201'),('J301','L301'),('J401','Z401'),('J501','Z501'),('J601','Y601'),('J602','Z601'),('J102','T102'),('J103','T103')]:
+    b=next(b for b in blocks if b['reference']==connector)
+    for pin,detail in b['pins'].items():
+        harness.append({'net':detail['net'],'from':[connector,pin],'to':[load,pin]})
+harness.append({'net':'CHASSIS','from':['J104','2'],'to':['H101','1']})
+external={'L201','L301','Z401','Z501','Y601','Z601','T102','T103','H101'}
+box=[c for c in components if c['reference'] not in external]
+# All pin coordinates are shared between the manifest and both models.
+layout={}
+for i,c in enumerate(box):
+    layout[c['reference']]=[70+(i%8)*145,65+(i//8)*110,25]
+for i,ref in enumerate(sorted(external)):
+    layout[ref]=[100+(i%3)*320,1450+(i//3)*300,40]
+pin_numbers={c['reference']:set() for c in components}
+for n in nets:
+    for ref,pin in n['pins']: pin_numbers[ref].add(pin)
+terminals={}
+for ref,nums in pin_numbers.items():
+    for i,pin in enumerate(sorted(nums,key=lambda p:(len(p),p))):
+        x,y,z=layout[ref]; terminals[f'{ref}.{pin}']=[x-40+i*8,y-28,z+12]
+internal=[]
+for n in nets:
+    members=[p for p in n['pins'] if p[0] not in external]
+    for a,b in zip(members,members[1:]): internal.append({'net':n['name'],'from':a,'to':b})
+config={'boosters':args.boosters,'targetVoltageV':target_voltage,'scale':args.voltage_scale,
+        'availableW':5*0.8**(args.boosters+1),'status':'functional concept; voltage/insulation/ampacity unvalidated'}
+spec={'source':str(source.relative_to(ROOT)),'configuration':config,'blocks':blocks,'components':components,'nets':nets,
+      'terminals':terminals,'boxWires':internal,'harness':harness}
+(ROOT/'magnos-plasma-wiring.json').write_text(json.dumps(spec,indent=2)+'\n')
+header='''// Generated from exported KiCad netlist. Millimetres, conceptual placement.
+// MV/GV/TV targets are NOT cable/component ratings. No clearance qualification.
+$fn=16;
+module cable(p,r=1.3) { for(i=[0:len(p)-2]) hull() {
+ translate(p[i]) sphere(r=r); translate(p[i+1]) sphere(r=r);
 } }
+module label_at(p,t) { translate(p) linear_extrude(0.3) text(t,size=7); }
 '''
-board = (ROOT / 'magnos_beta_board.scad').read_text().split('if(is_undef(assembly_include))')[0]
-assembly = (ROOT / 'plasma_shield_propulsion.scad').read_text().replace('use <magnos_beta_board.scad>', '')
-scad = '// Standalone generated assembly and harness. No external SCAD dependencies.\n' + board + '\n' + assembly + '\n' + scad
-for net, color, pts in paths:
-    scad += f'// {net}\nscale(model_scale) color({json.dumps(color)}) cable({json.dumps(pts)});\n'
-(ROOT / 'magnos-plasma.scad').write_text(scad)
-print(f'Generated single-sheet schematic: original beta + {len(blocks)} wired system blocks; CAD with {len(paths)} cable routes.')
+def color(net):
+    if net=='CHASSIS': return [0.3,0.8,0.3]
+    if net.endswith(('_N','RETURN')): return [0.4,0.45,0.65]
+    if 'TEMP' in net or 'CMD' in net or 'ENABLE' in net: return [0.2,0.8,0.9]
+    return [1,0.55,0.16]
+def draw_wire(w,i):
+    a=terminals['.'.join(w['from'])]; b=terminals['.'.join(w['to'])]
+    lane=65+i*1.4
+    pts=[a,[a[0],a[1],lane],[b[0],b[1],lane],b]
+    return f'// NET {w["net"]} {".".join(w["from"])} -> {".".join(w["to"])}\ncolor({json.dumps(color(w["net"]))}) cable({json.dumps(pts)});\n'
+box_scad=header+'''// Open top enclosure, all schematic box components and pin-level nets.
+color([0.13,0.15,0.19,0.35]) difference() {
+ cube([1240,1100,60]); translate([5,5,5]) cube([1230,1090,60]);
+}
+'''
+for c in box:
+    x,y,z=layout[c['reference']]
+    box_scad+=f'// COMPONENT {c["reference"]} {c["value"]}\ncolor([0.2,0.3,0.3]) translate([{x-50},{y-35},10]) cube([100,70,15]);\ncolor("white") label_at([{x-45},{y},26],{q(c["reference"])});\n'
+for i,w in enumerate(internal):box_scad+=draw_wire(w,i)
+box_scad+=f'color("white") label_at([20,1070,62],{q(str(args.boosters)+" Magnos / 10 "+args.voltage_scale+" target / conceptual routing")});\n'
+engine_scad=header+'// Separate engine and shield load layout with box feedthrough endpoints.\n'
+for ref in sorted(external):
+    x,y,z=layout[ref]
+    engine_scad+=f'// COMPONENT {ref}\ncolor([0.3,0.35,0.4]) translate([{x},{y},0]) cylinder(r=65,h=30);\ncolor("white") label_at([{x-40},{y},31],{q(ref)});\n'
+# Show each connector housing once; no invented wires or internal circuits.
+for ref in sorted({w['from'][0] for w in harness}):
+    x,y,z=layout[ref]
+    engine_scad+=f'color([0.25,0.3,0.35]) translate([{x-50},{y-35},10]) cube([100,70,15]);\ncolor("white") label_at([{x-45},{y},26],{q(ref)});\n'
+for i,w in enumerate(harness):engine_scad+=draw_wire(w,i)
+# Actual pin terminal geometry makes endpoints inspectable in both views.
+for name,pos in terminals.items():
+    terminal=f'color("gold") translate({json.dumps(pos)}) sphere(r=2);\n'
+    if name.split('.')[0] not in external: box_scad+=terminal
+    if any(name in ['.'.join(w['from']),'.'.join(w['to'])] for w in harness):engine_scad+=terminal
+(ROOT/'magnos-plasma.scad').write_text(box_scad)
+(ROOT/'magnos-engine.scad').write_text(engine_scad)
+print(f'Generated {len(components)} components, {len(internal)} box wires, {len(harness)} external conductors; {args.boosters} booster(s), 10 {args.voltage_scale}.')

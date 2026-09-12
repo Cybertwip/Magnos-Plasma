@@ -9,7 +9,7 @@
 <body>
   <main class="app-shell stage-shell">
     <header class="topbar stage-topbar">
-      <h1>Solar Slingshot</h1>
+      <div><p class="eyebrow">MISSION CONTROL / SOL SYSTEM</p><h1>Solar Slingshot</h1></div>
       <div class="top-actions">
         <button id="playButton" type="button">Pause</button>
         <button id="resetButton" type="button" class="secondary">Reset</button>
@@ -35,14 +35,48 @@
           </article>
         </div>
 
+        <aside class="route-card">
+          <p class="eyebrow">POWERED TRANSFERS</p>
+          <div class="route-selects"><label>From<select id="routeOrigin"></select></label><label>To<select id="routeTarget"></select></label></div>
+          <p id="routeComparison">Tangent-matched plasma arcs</p>
+          <p id="missionFeasibility"></p>
+          <p id="brakeSummary"></p>
+          <label class="check-row"><input id="brakeToggle" type="checkbox" checked> Flip and brake at Alpha Centauri</label>
+          <label class="stage-control thermal-setting"><span>Radiator target</span><select id="radiatorTarget"><option value="600">600 K · reduced power</option><option value="900">900 K · balanced</option><option value="1216" selected>1216 K · maximum power</option></select></label>
+          <p class="muted">Thermal-limited sandbox. Low temperature means less thrust; radiators still run hot.</p>
+        </aside>
         <aside class="flight-card">
           <span id="statusBadge" class="badge">RUNNING</span>
           <p id="rocketStateStat">Not launched</p>
           <dl>
             <div><dt>Speed</dt><dd id="rocketSpeedStat">—</dd></div>
             <div><dt>Distance</dt><dd id="solarDistanceStat">—</dd></div>
+            <div><dt>Voltage target</dt><dd id="engineBankStat">2 × 10.0 MV</dd></div>
+            <div><dt>Thrust</dt><dd id="plasmaThrustStat">—</dd></div>
             <div><dt>Route</dt><dd id="routeStat">Launch to fly</dd></div>
           </dl>
+          <div class="thermal-gauges compact-thermals">
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Coil</span><strong id="coilTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="coilTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Reactor</span><strong id="reactorTempValue">500 K</strong></div>
+              <div class="thermal-track"><span id="reactorTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Radiator</span><strong id="radiatorTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="radiatorTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Hull</span><strong id="hullTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="hullTempFill" class="thermal-fill"></span></div>
+            </div>
+            <div class="thermal-row">
+              <div class="thermal-label"><span>Shield</span><strong id="shieldTempValue">300 K</strong></div>
+              <div class="thermal-track"><span id="shieldTempFill" class="thermal-fill"></span></div>
+            </div>
+          </div>
         </aside>
 
         <div class="stage-controls">
@@ -59,6 +93,17 @@
               <option value="Rocket">Rocket</option>
             </select>
           </label>
+          <label class="stage-control" for="engineCountSlider">
+            <span>Plasma engines <strong id="engineCountValue">1</strong></span>
+            <input id="engineCountSlider" type="range" min="1" max="8" step="1" value="1">
+          </label>
+          <label class="stage-control" for="plasmaVoltageSlider">
+            <span>Voltage target <strong id="plasmaVoltageValue">10.0 MV</strong></span>
+            <input id="plasmaVoltageSlider" type="range" min="1" max="100" step="0.5" value="10">
+          </label>
+          <label class="stage-control"><span>Voltage scale</span><select id="voltageScale"><option value="1000000">MV</option><option value="1000000000">GV</option><option value="1000000000000">TV</option></select></label>
+          <label class="stage-control"><span>Magnos stages</span><select id="boosterCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
+          <p id="bankSummary" class="bank-summary"></p>
         </div>
       </div>
     </section>
@@ -69,7 +114,6 @@
     <input id="flybySlider" type="range" min="100" max="50000" step="100" value="500"><span id="flybyValue"></span>
     <input id="cruiseThrustSlider" type="range" min="0" max="100" step="1" value="100"><span id="cruiseThrustValue"></span>
     <input id="casimirGapSlider" type="range" min="10" max="500" step="5" value="100"><span id="casimirGapValue"></span>
-    <input id="brakeToggle" type="checkbox" checked>
     <input id="oberthSlider" type="range" min="0" max="20" step="0.1" value="8"><span id="oberthValue"></span>
     <input id="periSlider" type="range" min="3" max="20" step="0.5" value="8"><span id="periValue"></span>
     <input id="trailToggle" type="checkbox" checked>
@@ -83,13 +127,8 @@
     <span id="peakSpeedStat"></span><span id="helioSpeedStat"></span><span id="alphaStat"></span><span id="solarExitStat"></span>
     <span id="magnosInput"></span><span id="magnosOutput"></span><span id="magnosStatus"></span>
     <span id="plasmaElectricalStat"></span><span id="plasmaMagneticStat"></span>
-    <span id="plasmaThrustStat"></span><span id="plasmaAccelerationStat"></span>
+    <span id="plasmaAccelerationStat"></span>
     <span id="shieldEmfStat"></span><span id="shieldAttenuationStat"></span>
-    <span id="coilTempFill"></span><span id="coilTempValue"></span>
-    <span id="reactorTempFill"></span><span id="reactorTempValue"></span>
-    <span id="radiatorTempFill"></span><span id="radiatorTempValue"></span>
-    <span id="hullTempFill"></span><span id="hullTempValue"></span>
-    <span id="shieldTempFill"></span><span id="shieldTempValue"></span>
     <span id="radiatorDeployStat"></span><span id="thermalGovernorStat"></span>
     <span id="relativityDelta"></span>
   </div>
