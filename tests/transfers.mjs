@@ -36,7 +36,7 @@ vm.runInContext(`
 const cruiseThrustSlider={value:100}, injectionSlider={value:3.2}, flybySlider={value:500}, periSlider={value:4};
 const rocketStateStat={textContent:''},routeStat={textContent:''},oberthStat={textContent:''};
 epochDate=new Date('2026-09-06T00:00:00Z');initializeBodies(epochDate);
-const plan=optimizeSlingshotRoute();
+const plan=optimizeSlingshotRoute({solver:"lambert"});
 assert.ok(plan.route.length);
 assert.equal(plan.encounters[0].flybyEnergyGainJkg,Math.max(...plan.candidates.map(c=>c.flybyEnergyGainJkg)));
 assert.ok(plan.route[0]!=='Venus','current epoch must not repeat old Venus bias');

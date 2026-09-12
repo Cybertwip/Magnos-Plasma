@@ -1031,6 +1031,60 @@ function encounterOffsetFor(name, position) {
 }
 
 function optimizeSlingshotRoute(options = {}) {
+  if(options.solver==="lambert") return optimizeLambertSlingshotRoute(options);
+  const startName=options.startName ?? "Earth", sun=getBody("Sol"), origin=getBody(startName);
+  const startPosition=options.startPosition?.clone() ?? origin.position.clone().sub(sun.position)
+    .add(encounterOffsetFor(startName,origin.position.clone().sub(sun.position)).multiplyScalar(2.3));
+  const launchExcessMps=options.launchExcessMps ?? Number(injectionSlider.value)*1000;
+  const startVelocity=options.startVelocity?.clone() ?? origin.velocity.clone().sub(sun.velocity)
+    .addScaledVector(origin.velocity.clone().sub(sun.velocity).normalize(),launchExcessMps);
+  const visited=new Set(options.visited ?? [startName]);
+  const drive=steadyPlasmaDrive(plasmaThrottleCommand(),options.thermalDerate ?? 1);
+  const altitudeM=options.altitudeM ?? Number(flybySlider.value)*1000;
+  const candidates=[];
+  if((options.encountersUsed ?? 0)<MAX_ASSIST_ENCOUNTERS) {
+    for(const target of BODY_DEFINITIONS.filter(b=>b.elements && !visited.has(b.name) && getBody(b.name).position.distanceTo(sun.position)>startPosition.length()*0.95)) {
+      // Both incoming speed and time of flight are searched. The flyby remains
+      // a gravity-only turn in the planet frame; plasma work is separate.
+      for(const excess of [20000,80000,250000,600000]) {
+        const solved=planPoweredTransfer({position:startPosition,velocity:startVelocity,acceleration:drive.properAcceleration,mu:SUN_MU,
+          minimumRadius:Math.max(50*SUN_RADIUS_M,startPosition.length()*0.85),
+          predictArrival:seconds=>{
+            const state=predictPlanetRelative(target.name,new Date(currentDate().getTime()+seconds*1000));
+            const planetVelocity=state.velocity.clone();
+            const offset=encounterOffsetFor(target.name,state.position);
+            // Radial v-infinity admits a positive prograde turn at the flyby.
+            state.velocity.addScaledVector(state.position.clone().normalize(),excess);
+            state.position.add(offset);
+            return {...state,planetVelocity,offset};
+          }});
+        if(!solved) continue;
+        const assist=gravityAssist(solved.arrival.velocity,solved.arrival.planetVelocity,G*target.mass,target.radiusM+altitudeM);
+        if(!assist || assist.energyGainJkg<=0) continue;
+        const poweredEnergyGainJkg=solved.arrival.velocity.lengthSq()/2-SUN_MU/solved.arrival.position.length()
+          -(startVelocity.lengthSq()/2-SUN_MU/startPosition.length());
+        candidates.push({name:target.name,previousName:startName,method:"Plasma tangent flyby",flyby:true,arc:solved.arc,
+          transferDuration:solved.seconds,naturalTime:hohmannTime(startPosition.length(),solved.arrival.position.length(),SUN_MU),
+          encounterOffset:solved.arrival.offset,solution:{v1:startVelocity,v2:solved.arrival.velocity},
+          departureDeltaV:0,poweredDeltaV:solved.arc.deltaV,burnBudgetDeltaV:solved.arc.deltaV*2,
+          flybyEnergyGainJkg:assist.energyGainJkg,poweredEnergyGainJkg,totalEnergyGainJkg:assist.energyGainJkg+poweredEnergyGainJkg,
+          outgoingVelocity:assist.velocity,outgoingSpeed:assist.velocity.length(),vInfinity:assist.vInfinity,turnAngle:assist.turnAngle,
+          averageSpeed:startPosition.distanceTo(solved.arrival.position)/solved.seconds});
+      }
+    }
+  }
+  // Fastest feasible average transfer speed, then outgoing speed. Sampled
+  // search only: not a claim of a globally optimal interstellar trajectory.
+  candidates.sort((a,b)=>b.averageSpeed-a.averageSpeed || b.outgoingSpeed-a.outgoingSpeed);
+  const best=candidates[0];
+  return {solver:"powered",route:best?[best.name]:[],encounters:best?[best]:[],candidates,
+    launchExcessMps,altitudeM,startPosition,totalTransferDuration:best?.transferDuration??0,
+    totalEnergyGainJkg:best?.totalEnergyGainJkg??0,totalFlybyEnergyGainJkg:best?.flybyEnergyGainJkg??0,
+    totalPoweredEnergyGainJkg:best?.poweredEnergyGainJkg??0,totalPoweredDeltaV:best?.poweredDeltaV??0,
+    exitSpeed:best?.outgoingSpeed??startVelocity.length()};
+}
+
+function optimizeLambertSlingshotRoute(options = {}) {
   const startName = options.startName ?? "Earth";
   const launchExcessMps = options.launchExcessMps ?? Number(injectionSlider.value) * 1000;
   const altitudeM = options.altitudeM ?? Number(flybySlider.value) * 1000;
@@ -1087,7 +1141,7 @@ function optimizeSlingshotRoute(options = {}) {
   // not surface gravity or a reward for extra plasma burns. Time breaks ties.
   candidates.sort((a,b) => b.flybyEnergyGainJkg-a.flybyEnergyGainJkg || a.transferDuration-b.transferDuration);
   const best = candidates[0];
-  return {route:best ? [best.name] : [], encounters:best ? [best] : [], candidates,
+  return {solver:"lambert", route:best ? [best.name] : [], encounters:best ? [best] : [], candidates,
     launchExcessMps, altitudeM, totalEnergyGainJkg:best?.flybyEnergyGainJkg ?? 0,
     totalFlybyEnergyGainJkg:best?.flybyEnergyGainJkg ?? 0, totalPoweredEnergyGainJkg:0,
     totalTransferDuration:best?.transferDuration ?? 0, totalPoweredDeltaV:best?.departureDeltaV ?? 0,
@@ -1137,7 +1191,7 @@ function beginArcLeg(targetName) {
 
 function replanFromCurrentState(name) {
   const sun = getBody("Sol");
-  rocket.plan = optimizeSlingshotRoute({startName:name, launchExcessMps:0,
+  rocket.plan = optimizeSlingshotRoute({solver:rocket.plan.solver,startName:name, launchExcessMps:0,
     startPosition:rocket.position.clone().sub(sun.position),
     startVelocity:rocket.velocity.clone().sub(sun.velocity),
     visited:rocket.visitedPlanets, encountersUsed:rocket.encountersCompleted,
@@ -1147,7 +1201,7 @@ function replanFromCurrentState(name) {
   if (rocket.plan.route.length) {
     const target = rocket.plan.route[0];
     rocket.plannedRouteHistory.push(target);
-    routeStat.textContent = `${rocket.visitedPlanets.join(" → ")} → ${target} · strongest reachable gain ${formatNumber(rocket.plan.totalFlybyEnergyGainJkg / 1e6, 1)} MJ/kg`;
+    routeStat.textContent = `${rocket.visitedPlanets.join(" → ")} → ${target} · powered transfer · ${(rocket.plan.totalTransferDuration/DAY).toFixed(1)} d`;
     beginArcLeg(target);
   } else {
     routeStat.textContent = `${rocket.visitedPlanets.join(" → ")} · outbound escape`;
@@ -1354,7 +1408,10 @@ function advancePoweredArc(dt) {
   } else if(leg.elapsed>=leg.duration-1e-6) {
     const hill=target.position.distanceTo(sun.position)*Math.cbrt(target.mass/(3*SUN_MASS));
     const miss=rocket.position.distanceTo(target.position);
-    if(miss<=hill) {
+    if(miss<=hill && leg.encounter.flyby) {
+      rocket.routePoweredEnergyGainJkg+=leg.encounter.poweredEnergyGainJkg;
+      applyFlybyEncounter(target.name);
+    } else if(miss<=hill) {
       leg.phase="Capture";
       rocketStateStat.textContent=`${target.name} · matching planet velocity`;
     } else {
