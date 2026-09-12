@@ -14,15 +14,18 @@
       "pins": {
         "1": {
           "function": "+",
-          "net": "PWR_RAW"
+          "net": "PWR_RAW",
+          "side": "R"
         },
         "2": {
           "function": "-",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "CHASSIS",
-          "net": "CHASSIS"
+          "net": "CHASSIS",
+          "side": "L"
         }
       }
     },
@@ -32,11 +35,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "PWR_RAW"
+          "net": "PWR_RAW",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "PWR_FUSED"
+          "net": "PWR_FUSED",
+          "side": "R"
         }
       }
     },
@@ -46,11 +51,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "PWR_FUSED"
+          "net": "PWR_FUSED",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "R"
         }
       }
     },
@@ -60,11 +67,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "ESTOP_OK"
+          "net": "ESTOP_OK",
+          "side": "R"
         }
       }
     },
@@ -74,11 +83,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "ESTOP_OK"
+          "net": "ESTOP_OK",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "COVER_OK"
+          "net": "COVER_OK",
+          "side": "R"
         }
       }
     },
@@ -88,11 +99,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "COVER_OK"
+          "net": "COVER_OK",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "ENABLE"
+          "net": "ENABLE",
+          "side": "R"
         }
       }
     },
@@ -102,11 +115,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "ENABLE"
+          "net": "ENABLE",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "R"
         }
       }
     },
@@ -116,35 +131,43 @@
       "pins": {
         "1": {
           "function": "VCC",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "L"
         },
         "2": {
           "function": "GND",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "ENABLE",
-          "net": "ENABLE"
+          "net": "ENABLE",
+          "side": "L"
         },
         "4": {
           "function": "SH_TEMP",
-          "net": "SH_TEMP"
+          "net": "SH_TEMP",
+          "side": "L"
         },
         "5": {
           "function": "PR_TEMP",
-          "net": "PR_TEMP"
+          "net": "PR_TEMP",
+          "side": "R"
         },
         "6": {
           "function": "CMD_SH",
-          "net": "CMD_SH"
+          "net": "CMD_SH",
+          "side": "R"
         },
         "7": {
           "function": "CMD_PR",
-          "net": "CMD_PR"
+          "net": "CMD_PR",
+          "side": "R"
         },
         "8": {
           "function": "CMD_GAS",
-          "net": "CMD_GAS"
+          "net": "CMD_GAS",
+          "side": "R"
         }
       }
     },
@@ -154,15 +177,18 @@
       "pins": {
         "1": {
           "function": "VCC",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "SIGNAL",
-          "net": "SH_TEMP"
+          "net": "SH_TEMP",
+          "side": "R"
         }
       }
     },
@@ -172,15 +198,18 @@
       "pins": {
         "1": {
           "function": "VCC",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "SIGNAL",
-          "net": "PR_TEMP"
+          "net": "PR_TEMP",
+          "side": "R"
         }
       }
     },
@@ -190,11 +219,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "CHASSIS"
+          "net": "CHASSIS",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "CHASSIS"
+          "net": "CHASSIS",
+          "side": "R"
         }
       }
     },
@@ -204,11 +235,13 @@
       "pins": {
         "1": {
           "function": "A",
-          "net": "BOOST_AC_A"
+          "net": "BOOST_AC_A",
+          "side": "L"
         },
         "2": {
           "function": "K",
-          "net": "HV_RAW_P"
+          "net": "HV_RAW_P",
+          "side": "R"
         }
       }
     },
@@ -218,11 +251,13 @@
       "pins": {
         "1": {
           "function": "A",
-          "net": "BOOST_AC_B"
+          "net": "BOOST_AC_B",
+          "side": "L"
         },
         "2": {
           "function": "K",
-          "net": "HV_RAW_P"
+          "net": "HV_RAW_P",
+          "side": "R"
         }
       }
     },
@@ -232,11 +267,13 @@
       "pins": {
         "1": {
           "function": "A",
-          "net": "HV_RETURN"
+          "net": "HV_RETURN",
+          "side": "L"
         },
         "2": {
           "function": "K",
-          "net": "BOOST_AC_A"
+          "net": "BOOST_AC_A",
+          "side": "R"
         }
       }
     },
@@ -246,11 +283,13 @@
       "pins": {
         "1": {
           "function": "A",
-          "net": "HV_RETURN"
+          "net": "HV_RETURN",
+          "side": "L"
         },
         "2": {
           "function": "K",
-          "net": "BOOST_AC_B"
+          "net": "BOOST_AC_B",
+          "side": "R"
         }
       }
     },
@@ -260,11 +299,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "HV_RAW_P"
+          "net": "HV_RAW_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "HV_PREBOOST_P"
+          "net": "HV_PREBOOST_P",
+          "side": "R"
         }
       }
     },
@@ -274,11 +315,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "HV_BUS_P"
+          "net": "HV_BUS_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "HV_STACK_RETURN"
+          "net": "HV_STACK_RETURN",
+          "side": "R"
         }
       }
     },
@@ -288,11 +331,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "HV_BUS_P"
+          "net": "HV_BUS_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "HV_STACK_RETURN"
+          "net": "HV_STACK_RETURN",
+          "side": "R"
         }
       }
     },
@@ -302,19 +347,23 @@
       "pins": {
         "1": {
           "function": "IN+",
-          "net": "HV_BUS_P"
+          "net": "HV_BUS_P",
+          "side": "L"
         },
         "2": {
           "function": "IN-",
-          "net": "HV_STACK_RETURN"
+          "net": "HV_STACK_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "LV_GND",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "R"
         },
         "4": {
           "function": "OUT",
-          "net": "HV_SENSE"
+          "net": "HV_SENSE",
+          "side": "R"
         }
       }
     },
@@ -324,11 +373,13 @@
       "pins": {
         "1": {
           "function": "HV_SENSE",
-          "net": "HV_SENSE"
+          "net": "HV_SENSE",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "R"
         }
       }
     },
@@ -338,11 +389,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "BOOST_DC_P"
+          "net": "BOOST_DC_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "SH_DC_IN"
+          "net": "SH_DC_IN",
+          "side": "R"
         }
       }
     },
@@ -352,27 +405,33 @@
       "pins": {
         "1": {
           "function": "IN+",
-          "net": "SH_DC_IN"
+          "net": "SH_DC_IN",
+          "side": "L"
         },
         "2": {
           "function": "IN-",
-          "net": "BOOST_DC_N"
+          "net": "BOOST_DC_N",
+          "side": "L"
         },
         "3": {
           "function": "CTRL",
-          "net": "CMD_SH"
+          "net": "CMD_SH",
+          "side": "L"
         },
         "4": {
           "function": "CTRL_RTN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "5": {
           "function": "OUT+",
-          "net": "SH_COIL_P"
+          "net": "SH_COIL_P",
+          "side": "R"
         },
         "6": {
           "function": "OUT-",
-          "net": "SH_COIL_N"
+          "net": "SH_COIL_N",
+          "side": "R"
         }
       }
     },
@@ -382,11 +441,13 @@
       "pins": {
         "1": {
           "function": "POS",
-          "net": "SH_COIL_P"
+          "net": "SH_COIL_P",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "SH_COIL_N"
+          "net": "SH_COIL_N",
+          "side": "L"
         }
       }
     },
@@ -396,11 +457,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "SH_COIL_P"
+          "net": "SH_COIL_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "SH_COIL_N"
+          "net": "SH_COIL_N",
+          "side": "L"
         }
       }
     },
@@ -410,11 +473,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "BOOST_DC_P"
+          "net": "BOOST_DC_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "PR_DC_IN"
+          "net": "PR_DC_IN",
+          "side": "R"
         }
       }
     },
@@ -424,27 +489,33 @@
       "pins": {
         "1": {
           "function": "IN+",
-          "net": "PR_DC_IN"
+          "net": "PR_DC_IN",
+          "side": "L"
         },
         "2": {
           "function": "IN-",
-          "net": "BOOST_DC_N"
+          "net": "BOOST_DC_N",
+          "side": "L"
         },
         "3": {
           "function": "CTRL",
-          "net": "CMD_PR"
+          "net": "CMD_PR",
+          "side": "L"
         },
         "4": {
           "function": "CTRL_RTN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "5": {
           "function": "OUT+",
-          "net": "PR_COIL_P"
+          "net": "PR_COIL_P",
+          "side": "R"
         },
         "6": {
           "function": "OUT-",
-          "net": "PR_COIL_N"
+          "net": "PR_COIL_N",
+          "side": "R"
         }
       }
     },
@@ -454,11 +525,13 @@
       "pins": {
         "1": {
           "function": "POS",
-          "net": "PR_COIL_P"
+          "net": "PR_COIL_P",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "PR_COIL_N"
+          "net": "PR_COIL_N",
+          "side": "L"
         }
       }
     },
@@ -468,11 +541,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "PR_COIL_P"
+          "net": "PR_COIL_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "PR_COIL_N"
+          "net": "PR_COIL_N",
+          "side": "L"
         }
       }
     },
@@ -482,11 +557,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "HV_BUS_P"
+          "net": "HV_BUS_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "SH_HV_IN"
+          "net": "SH_HV_IN",
+          "side": "R"
         }
       }
     },
@@ -496,27 +573,33 @@
       "pins": {
         "1": {
           "function": "IN+",
-          "net": "SH_HV_IN"
+          "net": "SH_HV_IN",
+          "side": "L"
         },
         "2": {
           "function": "IN-",
-          "net": "HV_STACK_RETURN"
+          "net": "HV_STACK_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "CTRL",
-          "net": "CMD_SH"
+          "net": "CMD_SH",
+          "side": "L"
         },
         "4": {
           "function": "CTRL_RTN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "5": {
           "function": "OUT+",
-          "net": "SH_ELECTRODE_P"
+          "net": "SH_ELECTRODE_P",
+          "side": "R"
         },
         "6": {
           "function": "OUT-",
-          "net": "SH_ELECTRODE_N"
+          "net": "SH_ELECTRODE_N",
+          "side": "R"
         }
       }
     },
@@ -526,11 +609,13 @@
       "pins": {
         "1": {
           "function": "POS",
-          "net": "SH_ELECTRODE_P"
+          "net": "SH_ELECTRODE_P",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "SH_ELECTRODE_N"
+          "net": "SH_ELECTRODE_N",
+          "side": "L"
         }
       }
     },
@@ -540,11 +625,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "SH_ELECTRODE_P"
+          "net": "SH_ELECTRODE_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "SH_ELECTRODE_N"
+          "net": "SH_ELECTRODE_N",
+          "side": "L"
         }
       }
     },
@@ -554,11 +641,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "HV_BUS_P"
+          "net": "HV_BUS_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "PR_HV_IN"
+          "net": "PR_HV_IN",
+          "side": "R"
         }
       }
     },
@@ -568,27 +657,33 @@
       "pins": {
         "1": {
           "function": "IN+",
-          "net": "PR_HV_IN"
+          "net": "PR_HV_IN",
+          "side": "L"
         },
         "2": {
           "function": "IN-",
-          "net": "HV_STACK_RETURN"
+          "net": "HV_STACK_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "CTRL",
-          "net": "CMD_PR"
+          "net": "CMD_PR",
+          "side": "L"
         },
         "4": {
           "function": "CTRL_RTN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "5": {
           "function": "OUT+",
-          "net": "PR_ELECTRODE_P"
+          "net": "PR_ELECTRODE_P",
+          "side": "R"
         },
         "6": {
           "function": "OUT-",
-          "net": "PR_ELECTRODE_N"
+          "net": "PR_ELECTRODE_N",
+          "side": "R"
         }
       }
     },
@@ -598,11 +693,13 @@
       "pins": {
         "1": {
           "function": "POS",
-          "net": "PR_ELECTRODE_P"
+          "net": "PR_ELECTRODE_P",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "PR_ELECTRODE_N"
+          "net": "PR_ELECTRODE_N",
+          "side": "L"
         }
       }
     },
@@ -612,11 +709,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "PR_ELECTRODE_P"
+          "net": "PR_ELECTRODE_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "PR_ELECTRODE_N"
+          "net": "PR_ELECTRODE_N",
+          "side": "L"
         }
       }
     },
@@ -626,23 +725,28 @@
       "pins": {
         "1": {
           "function": "VCC",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "L"
         },
         "2": {
           "function": "GND",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "CTRL",
-          "net": "CMD_GAS"
+          "net": "CMD_GAS",
+          "side": "L"
         },
         "4": {
           "function": "OUT+",
-          "net": "GAS_P"
+          "net": "GAS_P",
+          "side": "R"
         },
         "5": {
           "function": "OUT-",
-          "net": "GAS_N"
+          "net": "GAS_N",
+          "side": "R"
         }
       }
     },
@@ -652,11 +756,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "GAS_P"
+          "net": "GAS_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "GAS_N"
+          "net": "GAS_N",
+          "side": "R"
         }
       }
     },
@@ -666,27 +772,33 @@
       "pins": {
         "1": {
           "function": "IN+",
-          "net": "HV_BUS_P"
+          "net": "HV_BUS_P",
+          "side": "L"
         },
         "2": {
           "function": "IN-",
-          "net": "HV_STACK_RETURN"
+          "net": "HV_STACK_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "CTRL",
-          "net": "CMD_PR"
+          "net": "CMD_PR",
+          "side": "L"
         },
         "4": {
           "function": "CTRL_RTN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "5": {
           "function": "OUT+",
-          "net": "NEUT_P"
+          "net": "NEUT_P",
+          "side": "R"
         },
         "6": {
           "function": "OUT-",
-          "net": "NEUT_N"
+          "net": "NEUT_N",
+          "side": "R"
         }
       }
     },
@@ -696,11 +808,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "NEUT_P"
+          "net": "NEUT_P",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "NEUT_N"
+          "net": "NEUT_N",
+          "side": "R"
         }
       }
     },
@@ -710,27 +824,33 @@
       "pins": {
         "1": {
           "function": "IN+",
-          "net": "HV_PREBOOST_P"
+          "net": "HV_PREBOOST_P",
+          "side": "L"
         },
         "2": {
           "function": "IN-",
-          "net": "HV_RETURN"
+          "net": "HV_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "ENABLE",
-          "net": "ENABLE"
+          "net": "ENABLE",
+          "side": "L"
         },
         "4": {
           "function": "CTRL_RTN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "5": {
           "function": "OUT+",
-          "net": "HV_BUS_P"
+          "net": "HV_BUS_P",
+          "side": "R"
         },
         "6": {
           "function": "OUT-",
-          "net": "HV_STACK_RETURN"
+          "net": "HV_STACK_RETURN",
+          "side": "R"
         }
       }
     },
@@ -740,11 +860,13 @@
       "pins": {
         "1": {
           "function": "POS",
-          "net": "GAS_P"
+          "net": "GAS_P",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "GAS_N"
+          "net": "GAS_N",
+          "side": "L"
         }
       }
     },
@@ -754,11 +876,13 @@
       "pins": {
         "1": {
           "function": "POS",
-          "net": "NEUT_P"
+          "net": "NEUT_P",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "NEUT_N"
+          "net": "NEUT_N",
+          "side": "L"
         }
       }
     },
@@ -768,15 +892,18 @@
       "pins": {
         "1": {
           "function": "VCC",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "SIGNAL",
-          "net": "SH_TEMP"
+          "net": "SH_TEMP",
+          "side": "R"
         }
       }
     },
@@ -786,15 +913,18 @@
       "pins": {
         "1": {
           "function": "VCC",
-          "net": "INPUT_5V"
+          "net": "INPUT_5V",
+          "side": "L"
         },
         "2": {
           "function": "RETURN",
-          "net": "INPUT_RETURN"
+          "net": "INPUT_RETURN",
+          "side": "L"
         },
         "3": {
           "function": "SIGNAL",
-          "net": "PR_TEMP"
+          "net": "PR_TEMP",
+          "side": "R"
         }
       }
     },
@@ -804,11 +934,13 @@
       "pins": {
         "1": {
           "function": "1",
-          "net": "CHASSIS"
+          "net": "CHASSIS",
+          "side": "L"
         },
         "2": {
           "function": "2",
-          "net": "CHASSIS"
+          "net": "CHASSIS",
+          "side": "R"
         }
       }
     }

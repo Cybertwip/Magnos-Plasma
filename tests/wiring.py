@@ -39,9 +39,9 @@ print('PASS: all added pins, beta ports, rectifier polarity, isolated domains, c
 # Strip load-net labels and confirm driver-to-feedthrough copper. Loads keep
 # named stubs; KiCad still lists them on the labeled net in the check above.
 text = re.sub(r'\s+', ' ', (root / 'magnos-plasma.kicad_sch').read_text())
-pattern = r'\(label "(?:SH|PR)_(?:COIL|ELECTRODE)_[PN]" \(at [^)]*\) \(effects \(font \(size [^)]*\)\)(?: \(justify [^)]*\))?\) \(uuid [^)]*\)\)'
+pattern = r'\(label "[^"]+" \(at [^)]*\) \(effects \(font \(size [^)]*\)\)(?: \(justify [^)]*\))?\) \(uuid [^)]*\)\)'
 stripped, count = re.subn(pattern, '', text)
-assert count == 24, count
+assert count > 100, count
 cli = shutil.which('kicad-cli') or '/Applications/KiCad/KiCad.app/Contents/MacOS/kicad-cli'
 with tempfile.TemporaryDirectory() as temp:
     schematic = Path(temp) / 'magnos-plasma.kicad_sch'
@@ -55,6 +55,16 @@ with tempfile.TemporaryDirectory() as temp:
     for net in ET.parse(output).findall('./nets/net'):
         for pin in net.findall('node'):
             actual[(pin.get('ref'), pin.get('pin'))] = net.get('code')
+    groups = {}
+    for endpoint, net_name in pins.items():
+        groups.setdefault(net_name, []).append(endpoint)
+    physical_codes = {}
+    for net_name, endpoints in groups.items():
+        codes = {actual[endpoint] for endpoint in endpoints}
+        assert len(codes) == 1, (net_name, 'not fully wired', codes)
+        code = next(iter(codes))
+        assert code not in physical_codes, (net_name, 'shorted to', physical_codes.get(code))
+        physical_codes[code] = net_name
     for channel, load in [('201', 'L201'), ('301', 'L301'), ('401', 'Z401'), ('501', 'Z501')]:
         for driver_pin, load_pin in [('5', '1'), ('6', '2')]:
             assert actual[('U' + channel, driver_pin)] == actual[('J' + channel, load_pin)], (

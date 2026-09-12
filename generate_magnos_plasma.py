@@ -214,7 +214,7 @@ def block(ref, value, spec, x, y, hide_leg_text=False):
     blocks.append({
         'reference': ref,
         'value': value,
-        'pins': {str(i + 1): {'function': name, 'net': net} for i, (name, net, _side) in enumerate(spec)},
+        'pins': {str(i + 1): {'function': name, 'net': net, 'side': side} for i, (name, net, side) in enumerate(spec)},
     })
 
 
@@ -439,6 +439,64 @@ for net in ('BOOST_DC_P', 'BOOST_DC_N', 'INPUT_5V', 'INPUT_RETURN'):
 note('HV electrode branches + coil channels + valve + neutralizer SHARE the available input power.', grid(400), grid(444))
 note('Magnos J3 AC output is wired to the HV rectifier; J4 DC output is wired to the coil drivers.', grid(400), grid(448))
 note('TBD means not specified by source. This is a wired functional architecture, not a fabrication-ready design.', grid(400), grid(452))
+
+# Rebuild the functional area as an explicit ladder harness. Each symbol has
+# its own row; rails occupy the alleys. Every connection is copper; labels
+# identify nets but are not required for electrical continuity.
+saved_blocks = blocks
+root = parse(source.read_text())
+lib = child(root, 'lib_symbols')
+child(root, 'paper')[1:] = ['"User"', '1524', '1219.2']
+blocks, pins, net_pins = [], {}, {}
+columns = {}
+for i, saved in enumerate(saved_blocks):
+    col, row = divmod(i, 18)
+    center = grid(400 + col * 275)
+    columns[saved['reference']] = center
+    spec = [(p['function'],p['net'],p['side']) for p in saved['pins'].values()]
+    block(saved['reference'],saved['value'],spec,center,grid(32+row*36))
+
+all_nets = sorted(net_pins)
+rail_taps = {}
+for net_index, net in enumerate(all_nets):
+    bottom_y = grid(710 + net_index*2)
+    for ref, pin, px, py in net_pins[net]:
+        center = columns[ref]
+        side = -1 if px < center else 1
+        rail_x = round(center + side * grid(28 + net_index*2),2)
+        stub = (round(px + side*grid(8),2),py)
+        tap = (rail_x,py)
+        wire(stub,tap,'full-'+ref+'-'+pin)
+        junction(stub,'full-stub-'+ref+'-'+pin)
+        rail_taps.setdefault((net,rail_x,bottom_y),[]).append(tap)
+
+bottom_points = {}
+for (net,x,y),taps in rail_taps.items():
+    wire((x,min(p[1] for p in taps)),(x,y),'rail-'+net+str(x))
+    for i,tap in enumerate(taps): junction(tap,'tap-'+net+str(x)+str(i))
+    bottom_points.setdefault(net,[]).append((x,y))
+
+# Source ports connect at real copper. Unique breakout columns avoid existing
+# beta pin/junction columns. Crossings without junctions stay isolated.
+for i,(net,(px,py,ix,iy)) in enumerate(beta_pins.items()):
+    start=(round(px,2),py)
+    escape_x=round(px+0.37+i*0.13,2)
+    escape_y=round(py+0.37+i*0.13,2)
+    bottom_y=grid(710+all_nets.index(net)*2)
+    wire(start,(escape_x,escape_y),'source-escape-'+net)
+    wire((escape_x,escape_y),(escape_x,bottom_y),'source-vertical-'+net)
+    junction(start,'source-junction-'+net)
+    label_at(net,start,'source-net-'+net)
+    bottom_points.setdefault(net,[]).append((escape_x,bottom_y))
+
+for net,points in bottom_points.items():
+    if len(points)>1:
+        wire((min(p[0] for p in points),points[0][1]),(max(p[0] for p in points),points[0][1]),'backplane-'+net)
+    for i,point in enumerate(points):junction(point,'backplane-tap-'+net+str(i))
+    label_at(net,(max(p[0] for p in points),points[0][1]),'backplane-label-'+net)
+note('MAGNOS PLASMA / ALL CONNECTIONS DRAWN / CROSSINGS CONNECT ONLY AT JUNCTION DOTS',grid(630),grid(10))
+note(f'{args.boosters} cascaded booster(s); 10 {args.voltage_scale} target; 5 W input shared, assumed losses. Functional architecture, ratings TBD.',grid(630),grid(15))
+note('Original beta circuit at left. Three functional columns; named backplane conductors below.',grid(630),grid(20))
 
 (ROOT / 'magnos-plasma.kicad_sch').write_text(dump(root) + '\n')
 # Export actual KiCad connectivity, including every original beta component.
