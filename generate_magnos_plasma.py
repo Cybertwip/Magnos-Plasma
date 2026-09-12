@@ -143,17 +143,15 @@ def note(text, x, y):
     root.append(expr(f'(text {q(text)} (at {x} {y} 0) {fx} (uuid {uid(text)}))'))
 
 
-def manhattan(a, b, key, via='h'):
-    if a[0] == b[0] or a[1] == b[1]:
-        wire(a, b, key)
-        return
-    mid = (b[0], a[1]) if via == 'h' else (a[0], b[1])
-    wire(a, mid, key + 'a')
-    wire(mid, b, key + 'b')
+_render_blocks = False
 
 
 def block(ref, value, spec, x, y, hide_leg_text=False):
-    """spec: list of (name, net, side) with side in {'L','R'}."""
+    """Collect the shared pin specification, then render it at final positions."""
+    if not _render_blocks:
+        blocks.append({'reference':ref,'value':value,
+                       'pins':{str(i+1):{'function':name,'net':net,'side':side} for i,(name,net,side) in enumerate(spec)}})
+        return
     key = f'MagnosSystem:{ref}'
     left = [(i, n, net) for i, (n, net, side) in enumerate(spec) if side == 'L']
     right = [(i, n, net) for i, (n, net, side) in enumerate(spec) if side == 'R']
@@ -226,59 +224,6 @@ def diode(ref, value, anode, cathode, x, y):
     block(ref, value, [('A', anode, 'L'), ('K', cathode, 'R')], x, y, hide_leg_text=True)
 
 
-def stub_end(ref, pin):
-    p = pins[(ref, pin)]
-    xs = [coord[0] for (r, n), coord in pins.items() if r == ref]
-    dx = -grid(8) if p[0] <= sum(xs) / len(xs) else grid(8)
-    return (round(p[0] + dx, 2), p[1])
-
-
-def join(ref_a, pin_a, ref_b, pin_b, key, via='h'):
-    a = stub_end(ref_a, pin_a)
-    b = stub_end(ref_b, pin_b)
-    manhattan(a, b, key, via=via)
-    junction(a, key + 'ja')
-    junction(b, key + 'jb')
-
-
-def pair_bus(driver, load, connector, net_p, net_n):
-    """Driver OUT+/OUT- to load, with a connector tap. Lanes sit in the alley
-    so verticals do not run through a pin column."""
-    for net, dpin, lpin, cpin, lane, inset in (
-        (net_p, '5', '1', '1', grid(8), grid(6)),
-        (net_n, '6', '2', '2', grid(14), grid(10)),
-    ):
-        d = pins[(driver, dpin)]
-        l = pins[(load, lpin)]
-        c = pins[(connector, cpin)]
-        # Meet existing pin stubs on the outward side of each symbol.
-        d_stub = stub_end(driver, dpin)
-        l_stub = stub_end(load, lpin)
-        c_stub = stub_end(connector, cpin)
-        rail_y = max(d[1], l[1], c[1]) + lane
-        def lane_x(stub, pin):
-            return stub[0] + (inset if stub[0] >= pin[0] else -inset)
-        dx = lane_x(d_stub, d)
-        lx = lane_x(l_stub, l)
-        cx = lane_x(c_stub, c)
-        wire(d_stub, (dx, d[1]), net + 'd')
-        wire((dx, d[1]), (dx, rail_y), net + 'dv')
-        wire((dx, rail_y), (lx, rail_y), net + 'rail')
-        wire((lx, rail_y), (lx, l[1]), net + 'lv')
-        wire((lx, l[1]), l_stub, net + 'l')
-        wire(c_stub, (cx, c[1]), net + 'c')
-        wire((cx, c[1]), (cx, rail_y), net + 'cv')
-        junction(d_stub, net + 'sd')
-        junction(l_stub, net + 'sl')
-        junction(c_stub, net + 'sc')
-        junction((dx, d[1]), net + 'ed')
-        junction((lx, l[1]), net + 'el')
-        junction((cx, c[1]), net + 'ec')
-        junction((dx, rail_y), net + 'jd')
-        junction((lx, rail_y), net + 'jl')
-        junction((cx, rail_y), net + 'jc')
-
-
 # --- Title ----------------------------------------------------------------
 note('MAGNOS PLASMA SYSTEM - COMPLETE FUNCTIONAL WIRING / UNVALIDATED HARDWARE', grid(400), grid(8))
 note('Original beta circuit retained at left. Added blocks require circuit design and rated parts before construction.', grid(400), grid(12))
@@ -296,12 +241,6 @@ two('S102', 'Emergency stop NC', 'INPUT_5V', 'ESTOP_OK', grid(430), grid(40))
 two('S103', 'Enclosure interlock NC', 'ESTOP_OK', 'COVER_OK', grid(470), grid(40))
 two('S104', 'Thermal cutoff NC', 'COVER_OK', 'ENABLE', grid(510), grid(40))
 two('R101', 'Enable pulldown - TBD', 'ENABLE', 'INPUT_RETURN', grid(550), grid(40))
-join('J101', '1', 'F101', '1', 'in1')
-join('F101', '2', 'S101', '1', 'in2')
-join('S101', '2', 'S102', '1', 'in3')
-join('S102', '2', 'S103', '1', 'in4')
-join('S103', '2', 'S104', '1', 'in5')
-join('S104', '2', 'R101', '1', 'in6')
 
 # --- Controller and sensors ----------------------------------------------
 block('U101', 'Sequencer / shutdown controller - TBD',
@@ -338,8 +277,6 @@ block('TP101', 'HV differential monitor / isolation TBD',
 block('J105', 'Service monitor',
       [('HV_SENSE', 'HV_SENSE', 'L'), ('RETURN', 'INPUT_RETURN', 'R')],
       grid(520), grid(170))
-join('D102', '2', 'F102', '1', 'hvfuse')
-join('TP101', '4', 'J105', '1', 'sense')
 
 # --- Coil and electrode channels -----------------------------------------
 # Each channel: branch fuse, isolated driver, two-pin feedthrough, load.
@@ -359,7 +296,6 @@ def power_channel(prefix, y, dc_net, return_net, cmd, out_p, out_n, load_ref, lo
     # Both load pins on the left so the output bus can T onto them the same
     # way it taps the feedthrough, without crossing the symbol body.
     block(load_ref, load_value, [('1', out_p, 'L'), ('2', out_n, 'L')], grid(540), y + grid(28))
-    pair_bus('U' + prefix, load_ref, 'J' + prefix, out_p, out_n)
 
 
 power_channel('201', grid(210), 'SH_DC_IN', 'BOOST_DC_N', 'CMD_SH',
@@ -387,10 +323,6 @@ block('U602', 'Isolated neutralizer supply / TBD',
        ('OUT+', 'NEUT_P', 'R'), ('OUT-', 'NEUT_N', 'R')],
       grid(480), grid(410))
 two('Z601', 'Neutralizer cathode equivalent', 'NEUT_P', 'NEUT_N', grid(560), grid(410))
-join('U601', '4', 'Y601', '1', 'gasp')
-join('U601', '5', 'Y601', '2', 'gasn')
-join('U602', '5', 'Z601', '1', 'neutp')
-join('U602', '6', 'Z601', '2', 'neutn')
 
 # Cascaded functional converters: same input power, independent floating HV
 # output domains. These blocks do not claim the beta parts are MV/GV/TV rated.
@@ -399,7 +331,7 @@ for i in range(args.boosters):
     last = i == args.boosters - 1
     out_p = 'HV_BUS_P' if last else f'STAGE_{i+1}_P'
     out_n = 'HV_STACK_RETURN' if last else f'STAGE_{i+1}_N'
-    block(f'U{701+i}', f'Magnos isolated booster {i+1}/{args.boosters}; target {target_voltage**((i+1)/args.boosters):.3g} V / TBD',
+    block(f'U{701+i}', f'Magnos isolated booster {i+1}/{args.boosters}; target {30000*(target_voltage/30000)**((i+1)/args.boosters):.3g} V / TBD',
           [('IN+',previous_p,'L'),('IN-',previous_n,'L'),
            ('ENABLE','ENABLE','L'),('CTRL_RTN','INPUT_RETURN','L'),
            ('OUT+',out_p,'R'),('OUT-',out_n,'R')], grid(620),grid(120+i*38))
@@ -410,10 +342,6 @@ for ref in ('C101','R102','TP101'):
     old = next(b for b in blocks if b['reference']==ref)
     # Net labels are the electrical connection for these distant branches.
     old['pins']['2']['net'] = 'HV_STACK_RETURN'
-    px,py = stub_end(ref,'2')
-    for label in children(root,'label'):
-        if label[1]=='"HV_RETURN"' and tuple(map(float,child(label,'at')[1:3]))==(px,py):
-            label[1]='"HV_STACK_RETURN"'
 
 block('J601','Valve feedthrough',[('POS','GAS_P','L'),('RETURN','GAS_N','L')],grid(620),grid(430))
 block('J602','Neutralizer feedthrough',[('POS','NEUT_P','L'),('RETURN','NEUT_N','L')],grid(660),grid(430))
@@ -421,24 +349,6 @@ block('T102','Shield sensor',[('VCC','INPUT_5V','L'),('RETURN','INPUT_RETURN','L
 block('T103','Engine sensor',[('VCC','INPUT_5V','L'),('RETURN','INPUT_RETURN','L'),('SIGNAL','PR_TEMP','R')],grid(660),grid(470))
 two('H101','Engine chassis bond','CHASSIS','CHASSIS',grid(700),grid(470))
 note(f'CASCADED MAGNOS: {args.boosters} stage(s), {target_voltage:.3g} V target. 5 W source; 80% assumed per stage; no power multiplication.',grid(450),grid(485))
-
-# Tap Magnos J3/J4/J1 on copper offset from the pin numbers. Long runs
-# through the original drawing short the paired connector pins. Plasma-side
-# stubs already carry the same net names, which is the KiCad join.
-j3a = beta_pins['BOOST_AC_A']
-j3b = beta_pins['BOOST_AC_B']
-# Sit on the existing J3 output segments, not on the pin numbers.
-label_at('BOOST_AC_A', (round(j3a[0] + grid(4), 2), j3a[1]), 'j3a', 0)
-label_at('BOOST_AC_B', (round(j3b[0] - grid(4), 2), j3b[1]), 'j3b', 180)
-for net in ('BOOST_DC_P', 'BOOST_DC_N', 'INPUT_5V', 'INPUT_RETURN'):
-    sx, sy, _ix, _iy = beta_pins[net]
-    end = (round(sx - grid(8), 2), sy)
-    wire((sx, sy), end, 'beta' + net)
-    label_at(net, end, 'beta' + net + 'lbl', 180)
-
-note('HV electrode branches + coil channels + valve + neutralizer SHARE the available input power.', grid(400), grid(444))
-note('Magnos J3 AC output is wired to the HV rectifier; J4 DC output is wired to the coil drivers.', grid(400), grid(448))
-note('TBD means not specified by source. This is a wired functional architecture, not a fabrication-ready design.', grid(400), grid(452))
 
 # Rebuild the functional area as an explicit ladder harness. Each symbol has
 # its own row; rails occupy the alleys. Every connection is copper; labels
@@ -449,6 +359,7 @@ lib = child(root, 'lib_symbols')
 child(root, 'paper')[1:] = ['"User"', '1524', '1219.2']
 blocks, pins, net_pins = [], {}, {}
 columns = {}
+_render_blocks = True
 for i, saved in enumerate(saved_blocks):
     col, row = divmod(i, 18)
     center = grid(400 + col * 275)
@@ -521,8 +432,11 @@ box=[c for c in components if c['reference'] not in external]
 layout={}
 for i,c in enumerate(box):
     layout[c['reference']]=[70+(i%8)*145,65+(i//8)*110,25]
-for i,ref in enumerate(sorted(external)):
-    layout[ref]=[100+(i%3)*320,1450+(i//3)*300,40]
+layout.update({'L201':[7000,0,5820],'L301':[950,0,-1200],
+               'Z401':[7000,0,6210],'Z501':[790,0,-2400],
+               'Y601':[950,0,20],'Z601':[1900,0,-3500],
+               'T102':[7000,200,6000],'T103':[980,200,-1200],
+               'H101':[1200,0,2000]})
 pin_numbers={c['reference']:set() for c in components}
 for n in nets:
     for ref,pin in n['pins']: pin_numbers[ref].add(pin)
@@ -552,10 +466,10 @@ def color(net):
     if net.endswith(('_N','RETURN')): return [0.4,0.45,0.65]
     if 'TEMP' in net or 'CMD' in net or 'ENABLE' in net: return [0.2,0.8,0.9]
     return [1,0.55,0.16]
-def draw_wire(w,i):
+def draw_wire(w,i,engine=False):
     a=terminals['.'.join(w['from'])]; b=terminals['.'.join(w['to'])]
     lane=65+i*1.4
-    pts=[a,[a[0],a[1],lane],[b[0],b[1],lane],b]
+    pts=([a,[1450+i*35,a[1],a[2]],[1450+i*35,b[1],b[2]],b] if engine else [a,[a[0],a[1],lane],[b[0],b[1],lane],b])
     return f'// NET {w["net"]} {".".join(w["from"])} -> {".".join(w["to"])}\ncolor({json.dumps(color(w["net"]))}) cable({json.dumps(pts)});\n'
 box_scad=header+'''// Open top enclosure, all schematic box components and pin-level nets.
 color([0.13,0.15,0.19,0.35]) difference() {
@@ -567,7 +481,24 @@ for c in box:
     box_scad+=f'// COMPONENT {c["reference"]} {c["value"]}\ncolor([0.2,0.3,0.3]) translate([{x-50},{y-35},10]) cube([100,70,15]);\ncolor("white") label_at([{x-45},{y},26],{q(c["reference"])});\n'
 for i,w in enumerate(internal):box_scad+=draw_wire(w,i)
 box_scad+=f'color("white") label_at([20,1070,62],{q(str(args.boosters)+" Magnos / 10 "+args.voltage_scale+" target / conceptual routing")});\n'
-engine_scad=header+'// Separate engine and shield load layout with box feedthrough endpoints.\n'
+app=(ROOT/'app.js').read_text()
+def constant(name):
+    return float(re.search(rf'const {name} = ([\d_.]+);',app)[1].replace('_',''))
+engine_scad=header+f'''// Separate engine/shield assembly. Only verified external conductors.
+// Dimensions other than shield area, coil length/turns are conceptual.
+module ring(ro,ri,h) {{ difference() {{ cylinder(r=ro,h=h,$fn=64); translate([0,0,-1]) cylinder(r=ri,h=h+2,$fn=64); }} }}
+color([0.3,0.35,0.4,0.25]) ring(1250,1100,5700);
+color("silver") translate([0,0,-2500]) ring(830,750,{constant('COIL_LENGTH_M')*1000});
+for(i=[0:{int(constant('COIL_TURNS'))-1}]) color([0.72,0.45,0.2]) translate([0,0,-2500+i*2500/{int(constant('COIL_TURNS'))}]) ring(950,850,9);
+color("dimgray") translate([0,0,-4000]) difference() {{
+ cylinder(r1=1800,r2=830,h=1500,$fn=64);
+ translate([0,0,-1]) cylinder(r1=1680,r2=750,h=1502,$fn=64);
+}}
+color("slategray") translate([0,0,6000]) cylinder(r={math.sqrt(constant('SHIELD_AREA_M2')/math.pi)*1000},h=120,$fn=96);
+color([0.72,0.45,0.2]) translate([0,0,5820]) ring(7570,7410,150);
+color("steelblue") translate([0,0,0]) ring(950,750,150);
+color("gold") translate([1900,0,-3500]) cylinder(r=90,h=450);
+''' 
 for ref in sorted(external):
     x,y,z=layout[ref]
     engine_scad+=f'// COMPONENT {ref}\ncolor([0.3,0.35,0.4]) translate([{x},{y},0]) cylinder(r=65,h=30);\ncolor("white") label_at([{x-40},{y},31],{q(ref)});\n'
@@ -575,7 +506,7 @@ for ref in sorted(external):
 for ref in sorted({w['from'][0] for w in harness}):
     x,y,z=layout[ref]
     engine_scad+=f'color([0.25,0.3,0.35]) translate([{x-50},{y-35},10]) cube([100,70,15]);\ncolor("white") label_at([{x-45},{y},26],{q(ref)});\n'
-for i,w in enumerate(harness):engine_scad+=draw_wire(w,i)
+for i,w in enumerate(harness):engine_scad+=draw_wire(w,i,True)
 # Actual pin terminal geometry makes endpoints inspectable in both views.
 for name,pos in terminals.items():
     terminal=f'color("gold") translate({json.dumps(pos)}) sphere(r=2);\n'
