@@ -933,6 +933,16 @@ function velocityVerletStep(dt) {
   }
 
   simulatedSeconds += dt;
+  if(rocket?.lockedTo) {
+    const planet=getBody(rocket.lockedTo);
+    rocket.position.copy(planet.position).add(rocket.lockOffset);
+    rocket.velocity.copy(planet.velocity);
+    rocket.pathVelocity=rocket.velocity.clone();
+    rocket.earthElapsedSeconds+=dt;
+    rocket.travelerProperSeconds+=properTimeStep(dt,planet.velocity.length());
+    rocket.modeledHeliocentricSpeed=planet.velocity.clone().sub(getBody("Sol").velocity).length();
+    updatePlasmaCircuit(dt,false,0);
+  }
   if (rocket?.active && wasArcMode) advanceSlingshotArc(dt);
 
   if (rocket?.active && !rocket.arcMode && !wasArcMode) {
@@ -947,6 +957,7 @@ function velocityVerletStep(dt) {
 
 function currentPhysicsStep() {
   if (!rocket?.active) return 6 * 3600;
+  if (rocket.arcMode && rocket.leg.phase==="Capture") return 30;
   if (rocket.arcMode && rocket.leg.encounter.arc) return Math.min(300, Math.max(1e-6,rocket.leg.duration-rocket.leg.elapsed));
   if (rocket.arcMode) return Math.min(rocket.leg.guidanceDeltaV.length() > 0.1 ? 60 : 3600, Math.max(1e-6, rocket.leg.duration - rocket.leg.elapsed));
 
@@ -1254,12 +1265,13 @@ function selectedRoute() {
   if (typeof document === "undefined") return {origin:"Earth",target:"auto"};
   return {origin:document.getElementById("routeOrigin")?.value || "Earth",target:document.getElementById("routeTarget")?.value || "auto"};
 }
-function poweredRoutePlan(originName, targetName) {
+function poweredRoutePlan(originName, targetName, departure=null) {
   const sun=getBody("Sol"), origin=getBody(originName);
   const start=origin.position.clone().sub(sun.position);
   const offset=encounterOffsetFor(originName,start).multiplyScalar(2.3);
   start.add(offset);
-  const velocity=origin.velocity.clone().sub(sun.velocity);
+  if(departure) start.copy(departure.position).sub(sun.position);
+  const velocity=(departure?.velocity ?? origin.velocity).clone().sub(sun.velocity);
   const solved=planPoweredTransfer({position:start,velocity,acceleration:steadyPlasmaDrive().properAcceleration,
     mu:SUN_MU,minimumRadius:Math.max(50*SUN_RADIUS_M,Math.min(start.length(),getBody(targetName).position.distanceTo(sun.position))*0.45),
     predictArrival:seconds=>{
@@ -1277,7 +1289,41 @@ function poweredRoutePlan(originName, targetName) {
     totalTransferDuration:solved.seconds,totalEnergyGainJkg:0,totalPoweredDeltaV:solved.arc.deltaV,
     totalFlybyEnergyGainJkg:0,exitSpeed:solved.arrival.velocity.length(),startPosition:start};
 }
+function advancePlanetCapture(dt) {
+  const target=getBody(rocket.leg.targetName);
+  const correction=target.velocity.clone().sub(rocket.velocity);
+  const drive=updatePlasmaCircuit(dt,true,correction.length()/dt*SPACECRAFT_MASS_KG);
+  const dv=Math.min(correction.length(),drive.properAcceleration*dt);
+  rocket.velocity.addScaledVector(correction.normalize(),dv);
+  rocket.position.addScaledVector(rocket.velocity,dt);
+  rocket.assistPlasmaDeltaV+=dv;
+  rocket.earthElapsedSeconds+=dt;
+  rocket.travelerProperSeconds+=properTimeStep(dt,rocket.velocity.length());
+  rocket.pathVelocity=rocket.velocity.clone();
+  rocketStateStat.textContent=`${target.name} · capture burn · ${rocket.velocity.distanceTo(target.velocity).toFixed(1)} m/s relative`;
+  rocket.leg.captureSeconds=(rocket.leg.captureSeconds||0)+dt;
+  const hill=target.position.distanceTo(getBody("Sol").position)*Math.cbrt(target.mass/(3*SUN_MASS));
+  if(rocket.position.distanceTo(target.position)>hill || rocket.leg.captureSeconds>DAY) {
+    rocket.active=false;rocket.arcMode=false;rocketStateStat.textContent="Capture failed · no planet lock";return;
+  }
+  if(rocket.velocity.distanceTo(target.velocity)<0.1) {
+    rocket.lockedTo=target.name;
+    rocket.lockOffset=rocket.position.clone().sub(target.position);
+    rocket.velocity.copy(target.velocity);
+    rocket.active=false;rocket.arcMode=false;rocket.encountersCompleted++;
+    rocket.visitedPlanets ??= [];
+    rocket.visitedPlanets.push(target.name);
+    rocket.plasmaThrustN=0;
+    rocketStateStat.textContent=`Locked to ${target.name} · select next destination`;
+    if(typeof document!=="undefined") {
+      document.getElementById("routeOrigin").value=target.name;
+      document.getElementById("launchButton").textContent="Depart";
+      document.getElementById("routeTarget").value=target.name;
+    }
+  }
+}
 function advancePoweredArc(dt) {
+  if(rocket.leg.phase==="Capture") { advancePlanetCapture(dt);return; }
   const leg=rocket.leg, sun=getBody("Sol"), target=getBody(leg.targetName);
   const startSun=sun.position.clone().addScaledVector(sun.velocity,-dt);
   const r=rocket.position.clone().sub(startSun), v=rocket.velocity.clone().sub(sun.velocity);
@@ -1308,21 +1354,26 @@ function advancePoweredArc(dt) {
   } else if(leg.elapsed>=leg.duration-1e-6) {
     const hill=target.position.distanceTo(sun.position)*Math.cbrt(target.mass/(3*SUN_MASS));
     const miss=rocket.position.distanceTo(target.position);
-    rocket.active=false; rocket.arcMode=false;
-    rocketStateStat.textContent=miss<=hill ? `Arrived in ${target.name} vicinity · ${(rocket.velocity.distanceTo(target.velocity)/1000).toFixed(2)} km/s relative` : `Transfer missed · ${(miss/AU).toFixed(4)} AU from ${target.name}`;
-    if(miss<=hill) rocket.encountersCompleted++;
-    rocket.plasmaThrustN=0;
-    // SOI rendezvous only: no landing, orbit insertion or teleportation.
+    if(miss<=hill) {
+      leg.phase="Capture";
+      rocketStateStat.textContent=`${target.name} · matching planet velocity`;
+    } else {
+      rocket.active=false; rocket.arcMode=false;rocket.plasmaThrustN=0;
+      rocketStateStat.textContent=`Transfer missed · ${(miss/AU).toFixed(4)} AU from ${target.name}`;
+    }
   }
 }
 
 function launchRocket() {
-  const launchDate = new Date();
-  resetSimulation(launchDate);
-
+  if(rocket?.active) return;
+  const docked=rocket?.lockedTo ? rocket : null;
   const route=selectedRoute();
+  if(docked) route.origin=docked.lockedTo;
+  const launchDate = docked?.launchDate ?? new Date();
   if(route.origin===route.target) { rocketStateStat.textContent="Choose different planets"; return; }
-  const plan = route.target==="auto" ? optimizeSlingshotRoute({startName:route.origin}) : poweredRoutePlan(route.origin,route.target);
+  if(!docked) resetSimulation(launchDate);
+  const plan = route.target==="auto" ? optimizeSlingshotRoute({startName:route.origin,
+    ...(docked ? {startPosition:docked.position.clone().sub(getBody("Sol").position),startVelocity:docked.velocity.clone().sub(getBody("Sol").velocity),launchExcessMps:0} : {})}) : poweredRoutePlan(route.origin,route.target,docked);
   if(!plan) { rocketStateStat.textContent="No powered arc within the thrust and solar-clearance limits";return; }
   const earth = getBody(route.origin);
   const sun = getBody("Sol");
@@ -1395,6 +1446,11 @@ function launchRocket() {
     solarFluxWm2: SOLAR_CONSTANT_W_M2,
   };
 
+  if(docked) {
+    for(const key of ["earthElapsedSeconds","travelerProperSeconds","peakSpeed","minimumSolarDistance","assistPlasmaDeltaV","encountersCompleted","coilCurrentA","coilFieldT","radiatorTempK","radiatorAreaM2","coilTempK","reactorTempK","hullTempK","shieldTempK"]) rocket[key]=docked[key];
+    rocket.visitedPlanets=[...docked.visitedPlanets];
+    rocket.position.copy(docked.position);rocket.velocity.copy(docked.velocity);
+  }
   if (plan.route.length) beginArcLeg(plan.route[0]);
   else beginOutboundEscape(route.origin);
   routeStat.textContent = plan.route.length
@@ -1773,6 +1829,7 @@ function resetSimulation(date = new Date()) {
   simulatedSeconds = 0;
   physicsAccumulator = 0;
   rocket = null;
+  if(typeof document!=="undefined") document.getElementById("launchButton").textContent="Launch";
   initializeBodies(epochDate);
   resetTrails();
   rebuildRocketTrail();
@@ -1826,7 +1883,7 @@ const viewport = document.getElementById("viewport");
 const canvas = document.getElementById("sceneCanvas");
 const labelsLayer = document.getElementById("labels");
 const scene = new THREE.Scene();
-const plannedRouteLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineDashedMaterial({color:0x9ac8dc,dashSize:0.6,gapSize:0.3,transparent:true,opacity:0.7}));
+const plannedRouteLine=new THREE.Line(new THREE.BufferGeometry(),new THREE.LineBasicMaterial({color:0x9ac8dc,transparent:true,opacity:0.6}));
 scene.add(plannedRouteLine);
 function updateRoutePreview(plan=null) {
   if(!plan && rocket?.active) return;
@@ -1837,7 +1894,7 @@ function updateRoutePreview(plan=null) {
   if(arc) {
     const sun=getBody("Sol");
     plannedRouteLine.geometry.setFromPoints(Array.from({length:129},(_,i)=>renderVector(arc.sample(arc.seconds*i/128).position.add(sun.position))));
-    plannedRouteLine.computeLineDistances();
+
   }
 }
 
@@ -2706,6 +2763,7 @@ function updateMissionSummary() {
   const trip=interstellarEnvelope(ALPHA_TARGET_DISTANCE_M,drive.properAcceleration);
   const summary=document.getElementById("missionFeasibility");
   summary.textContent=trip ? `Alpha Cen A/B · 4.37 ly. Ideal flip-and-brake: ${(trip.earthSeconds/YEAR).toFixed(2)} Earth yr / ${(trip.travelerSeconds/YEAR).toFixed(2)} traveler yr. ${trip.travelerSeconds<2*YEAR ? "Under 2 traveler years in the ideal model only." : "Two-year traveler target not met."} Earth-time floor: 4.37 yr. Fuel inventory unmodeled.` : "No powered interstellar solution";
+  document.getElementById("launchButton").disabled=Boolean(rocket?.active);
   document.getElementById("engineBankStat").textContent=`${engineCount()} × ${formatVoltage(voltageCeiling())} ceiling`;
   const bank=magnosBoosterForPlasma();
   document.getElementById("bankSummary").textContent=`${bank.count} Magnos · ${bank.availableW.toFixed(0)} W shared output budget · target ${formatVoltage(bank.targetV)}. Drive source: hypothetical ${formatPower(drive.acceleratorPowerW)}; shared thermal limit.`;
@@ -2713,7 +2771,7 @@ function updateMissionSummary() {
   document.getElementById("routeComparison").textContent=leg ? `${leg.method} · ${(leg.transferDuration/DAY).toFixed(1)} d · plasma Δv ${(leg.poweredDeltaV/1000).toFixed(1)} km/s · Hohmann baseline ${(leg.naturalTime/DAY).toFixed(1)} d (different arrival phase)` : "Tangent-matched plasma arcs · acceleration and braking included";
   const brake=magneticBrake({densityKgM3:INTERSTELLAR_NUMBER_DENSITY_M3*PROTON_MASS_KG,speed:rocket?.modeledHeliocentricSpeed||0,areaM2:SHIELD_AREA_M2,fieldT:rocket?.coilFieldT||0});
   document.getElementById("brakeSummary").textContent=brake.valid ? `Reverse plasma thrust for arrival. External-plasma magnetic drag upper bound: ${brake.forceN.toExponential(2)} N; diagnostic only.` : "Reverse plasma thrust for arrival. Classical magnetic-drag estimate invalid above 0.1c; excluded from flight.";
-  for(const id of ["routeOrigin","routeTarget","engineCountSlider","plasmaVoltageSlider","voltageScale","boosterCount","radiatorTarget"]) document.getElementById(id).disabled=Boolean(rocket?.active);
+  for(const id of ["routeOrigin","routeTarget","engineCountSlider","plasmaVoltageSlider","voltageScale","boosterCount","radiatorTarget"]) document.getElementById(id).disabled=Boolean(rocket?.active || (id==="routeOrigin" && rocket?.lockedTo));
 }
 
 function syncControls() {
