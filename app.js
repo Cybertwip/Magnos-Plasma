@@ -1,7 +1,7 @@
 import * as THREE from "./vendor/three.mjs";
-import { magnosBooster, magnosBank } from "./magnos-booster.mjs";
+import { magnosBooster, magnosBank, MAGNOS_REFERENCE_PEAK_V, MAGNOS_REFERENCE_RMS_V, MAGNOS_TBD_TARGET_V } from "./magnos-booster.mjs";
 import { solveLambert, gravityAssist, hohmannTime, planPoweredTransfer, interstellarEnvelope, magneticBrake } from "./transfer-planner.mjs";
-import { ARGON_ION_MASS_KG, evToKelvin, pressureNozzleState } from "./plasma-pressure-engine.mjs";
+import { evToKelvin, pressureNozzleState } from "./plasma-pressure-engine.mjs";
 
 // three.mjs is intentionally a minimal export wrapper. These are the numeric
 // constants used by Three.js for material side selection.
@@ -26,9 +26,9 @@ const ALPHA_CENTAURI_DISTANCE_LY = 4.37; // Alpha Centauri A/B; Proxima is neare
 const DISPLAY_UNITS_PER_AU = 10;
 const MAX_TRAIL_POINTS = 900;
 const MAX_ROCKET_TRAIL_POINTS = 1400;
-const PLASMA_CRUISE_START_AU = 35;
+const PLASMA_CRUISE_START_AU = 30;
 const SOLAR_SYSTEM_EXIT_AU = 120;
-const INTERSTELLAR_VIEW_AU = 120;
+const INTERSTELLAR_VIEW_AU = 31;
 
 // During planetary transfers the plasma drive is used in short, high-power
 // momentum-building burns instead of waiting until heliocentric escape.  The
@@ -55,12 +55,13 @@ const STEFAN_BOLTZMANN = 5.670374419e-8;
 const CMB_TEMPERATURE_K = 2.725;
 const SOLAR_CONSTANT_W_M2 = 1361;
 
-const SPACECRAFT_MASS_KG = 60_000; // nominal wet mass at the default 20 t propellant load
 const SPACECRAFT_DRY_MASS_KG = 40_000;
-const DEFAULT_PROPELLANT_MASS_KG = SPACECRAFT_MASS_KG - SPACECRAFT_DRY_MASS_KG;
-const PLASMA_ACCELERATOR_VOLTAGE_V = 10_000_000; // hardware ceiling; thermal governor normally limits below this
+// Fixed mission reserve kept out of the cockpit. Continuous thrust still consumes it.
+const DEFAULT_PROPELLANT_MASS_KG = 1_000_000;
+const PLASMA_ACCELERATOR_VOLTAGE_V = MAGNOS_TBD_TARGET_V; // schematic target is explicitly TBD
 const PLASMA_EFFICIENCY = 0.75;
-const PLASMA_EXHAUST_VELOCITY_M_S = 1.5e6;
+const BASE_MAGNETIC_NOZZLE_VELOCITY_M_S = 1.5e6;
+const ELEMENTARY_CHARGE_C = 1.602176634e-19;
 const DEFAULT_PLASMA_DENSITY_M3 = 1e17;
 const DEFAULT_ELECTRON_TEMPERATURE_KEV = 30;
 const DEFAULT_ION_TEMPERATURE_KEV = 10;
@@ -569,8 +570,14 @@ function setting(id, fallback) {
   const value = Number(document.getElementById(id)?.value);
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
-function engineCount() { return clamp(Math.round(setting("engineCountSlider", 1)), 1, 8); }
-function voltageCeiling() { return setting("plasmaVoltageSlider", 10) * setting("voltageScale", 1e6); }
+function engineCount() { return clamp(Math.round(setting("engineCountSlider", 4)), 1, 8); }
+function voltageCeiling() { return setting("plasmaVoltageSlider", MAGNOS_TBD_TARGET_V / 1000) * setting("voltageScale", 1000); }
+function plasmaExhaustVelocityMps(acceleratorVoltageV = voltageCeiling()) {
+  const voltage = Math.max(0, acceleratorVoltageV);
+  const gamma = 1 + ELEMENTARY_CHARGE_C * voltage / (PROTON_MASS_KG * C * C);
+  const electrostaticVelocity = gamma > 1 ? C * Math.sqrt(Math.max(0, 1 - 1 / (gamma * gamma))) : 0;
+  return Math.hypot(BASE_MAGNETIC_NOZZLE_VELOCITY_M_S, electrostaticVelocity);
+}
 function plasmaDensityM3() {
   const exponent = typeof document === "undefined" ? Math.log10(DEFAULT_PLASMA_DENSITY_M3) : Number(document.getElementById("plasmaDensityExponent")?.value ?? 17);
   return 10 ** clamp(Number.isFinite(exponent) ? exponent : 17, 14, 22);
@@ -618,9 +625,9 @@ function steadyPlasmaDrive(throttle = plasmaThrottleCommand(), thermalDerate = 1
     numberDensityM3: plasmaDensityM3(),
     electronTemperatureK: electronTemperatureK(),
     ionTemperatureK: ionTemperatureK(),
-    exhaustVelocityMps: PLASMA_EXHAUST_VELOCITY_M_S,
+    exhaustVelocityMps: plasmaExhaustVelocityMps(availableAcceleratorVoltageV),
     exitAreaM2: nozzleAreaM2(),
-    ionMassKg: ARGON_ION_MASS_KG,
+    ionMassKg: PROTON_MASS_KG,
     propellantRemainingKg,
     dtSeconds: 0,
     exhaustEnabled: exhaustEnabled(),
@@ -654,6 +661,7 @@ function steadyPlasmaDrive(throttle = plasmaThrottleCommand(), thermalDerate = 1
     jetPowerW: nozzle.jetPowerW,
     nozzleStateScale: nozzle.stateScale,
     exhaustOpen: nozzle.exhaustEnabled,
+    exhaustVelocityMps: plasmaExhaustVelocityMps(availableAcceleratorVoltageV),
     properAcceleration: thrustN / Math.max(massKg, 1),
   };
 }
@@ -853,6 +861,8 @@ let rocket = null;
 let initialSystemEnergy = 0;
 let physicsAccumulator = 0;
 let isPlaying = true;
+let missionClockHold = false;
+let missionArrivalLabel = "";
 let simulationDaysPerSecond = 10;
 let trailEnabled = true;
 let labelsEnabled = true;
@@ -999,6 +1009,17 @@ function velocityVerletStep(dt) {
 
 }
 
+function holdMissionAtArrival(label) {
+  missionClockHold = true;
+  missionArrivalLabel = label;
+  physicsAccumulator = 0;
+  if (typeof document !== "undefined") {
+    const hold = document.getElementById("arrivalHoldValue");
+    if (hold) hold.textContent = "LOCKED";
+    statusBadge.textContent = "ARRIVED";
+  }
+}
+
 function currentPhysicsStep() {
   if (!rocket?.active) return 6 * 3600;
   if (rocket.arcMode && rocket.leg.phase==="Capture") return 30;
@@ -1021,7 +1042,7 @@ function currentPhysicsStep() {
 }
 
 function stepSimulation(realDeltaSeconds) {
-  if (!isPlaying) return;
+  if (!isPlaying || missionClockHold) return;
 
   physicsAccumulator += realDeltaSeconds * simulationDaysPerSecond * DAY;
   const maxStepsPerFrame = 180;
@@ -1358,6 +1379,14 @@ function beginOutboundEscape(lastPlanetName) {
   oberthStat.textContent = rocket.escaped
     ? `Hyperbolic · v∞ ${formatNumber(Math.sqrt(2 * specificEnergy) / 1000, 2)} km/s`
     : "Prograde plasma until escape";
+
+  // Alpha missions do not park at Neptune/the final gravity assist. The last
+  // encounter hands directly to continuous interstellar plasma cruise.
+  if (rocket.interstellarMission) {
+    initializeCruiseProfile();
+    rocketStateStat.textContent = `Interstellar injection · continuing beyond ${lastPlanetName} toward Alpha Centauri`;
+    routeStat.textContent = `${rocket.visitedPlanets.join(" → ")} ⇢ Alpha Centauri A/B · continuous plasma cruise`;
+  }
 }
 
 function selectedRoute() {
@@ -1413,7 +1442,8 @@ function advancePlanetCapture(dt) {
     rocket.visitedPlanets ??= [];
     rocket.visitedPlanets.push(target.name);
     rocket.plasmaThrustN=0;
-    rocketStateStat.textContent=`Locked to ${target.name} · select next destination`;
+    rocketStateStat.textContent=`Locked to ${target.name} · mission clock held`;
+    holdMissionAtArrival(target.name);
     if(typeof document!=="undefined") {
       document.getElementById("routeOrigin").value=target.name;
       document.getElementById("launchButton").textContent="Depart";
@@ -1459,6 +1489,10 @@ function advancePoweredArc(dt) {
     } else if(miss<=hill) {
       leg.phase="Capture";
       rocketStateStat.textContent=`${target.name} · matching planet velocity`;
+    } else if (rocket.interstellarMission) {
+      rocketStateStat.textContent=`${target.name} assist corridor missed · continuing to Alpha Centauri`;
+      routeStat.textContent=`Assist miss at ${target.name} · direct Magnos plasma interstellar injection`;
+      beginOutboundEscape(rocket.lastEncounterName ?? leg.targetName);
     } else {
       rocket.active=false; rocket.arcMode=false;rocket.plasmaThrustN=0;
       rocketStateStat.textContent=`Transfer missed · ${(miss/AU).toFixed(4)} AU from ${target.name}`;
@@ -1477,6 +1511,18 @@ function launchRocket() {
   const plan = route.target==="auto" ? optimizeSlingshotRoute({startName:route.origin,
     ...(docked ? {startPosition:docked.position.clone().sub(getBody("Sol").position),startVelocity:docked.velocity.clone().sub(getBody("Sol").velocity),launchExcessMps:0} : {})}) : poweredRoutePlan(route.origin,route.target,docked);
   if(!plan) { rocketStateStat.textContent="No powered arc within the thrust and solar-clearance limits";return; }
+
+  // A valid new departure is the only action that releases an arrival hold.
+  missionClockHold = false;
+  missionArrivalLabel = "";
+  isPlaying = true;
+  if (typeof document !== "undefined") {
+    playButton.textContent = "PAUSE";
+    statusBadge.textContent = "RUNNING";
+    const hold = document.getElementById("arrivalHoldValue");
+    if (hold) hold.textContent = "DISARMED";
+  }
+
   const earth = getBody(route.origin);
   const sun = getBody("Sol");
   const radial = earth.position.clone().sub(sun.position).normalize();
@@ -1487,6 +1533,8 @@ function launchRocket() {
     active: true,
     crashed: false,
     reachedAlpha: false,
+    destination: route.target === "auto" ? "Alpha Centauri A/B" : route.target,
+    interstellarMission: route.target === "auto",
     position,
     velocity: earth.velocity.clone().addScaledVector(earth.velocity.clone().sub(sun.velocity).normalize(), plan.launchExcessMps),
     acceleration: new THREE.Vector3(),
@@ -1797,9 +1845,9 @@ function updatePlasmaCircuit(dt, enabled, maximumThrustN = Infinity) {
     numberDensityM3: plasmaDensityM3(),
     electronTemperatureK: electronTemperatureK(),
     ionTemperatureK: ionTemperatureK(),
-    exhaustVelocityMps: PLASMA_EXHAUST_VELOCITY_M_S,
+    exhaustVelocityMps: plasmaExhaustVelocityMps(availableAcceleratorVoltageV),
     exitAreaM2: nozzleAreaM2(),
-    ionMassKg: ARGON_ION_MASS_KG,
+    ionMassKg: PROTON_MASS_KG,
     propellantRemainingKg: Math.max(0, rocket.propellantRemainingKg ?? 0),
     dtSeconds: Math.max(0, dt),
     maximumThrustN,
@@ -1835,6 +1883,7 @@ function updatePlasmaCircuit(dt, enabled, maximumThrustN = Infinity) {
   rocket.effectiveNumberDensityM3 = nozzle.effectiveNumberDensityM3;
   rocket.nozzleStateScale = nozzle.stateScale;
   rocket.exhaustOpen = nozzle.exhaustEnabled;
+  rocket.exhaustVelocityMps = plasmaExhaustVelocityMps(availableAcceleratorVoltageV);
   rocket.propellantFlowKgS = propellantFlowKgS;
   rocket.plasmaProperAcceleration = properAcceleration;
   rocket.thermalDerate = Math.min(coilDerate, powerDerate);
@@ -1860,6 +1909,7 @@ function updatePlasmaCircuit(dt, enabled, maximumThrustN = Infinity) {
     propellantRemainingKg: rocket.propellantRemainingKg,
     spacecraftMassKg: rocket.spacecraftMassKg,
     exhaustOpen: nozzle.exhaustEnabled,
+    exhaustVelocityMps: rocket.exhaustVelocityMps,
     nozzleStateScale: nozzle.stateScale,
     properAcceleration,
   };
@@ -1889,13 +1939,25 @@ function applyCruisePropulsion(dt) {
 
   const relativeVelocity = rocket.velocity.clone().sub(sun.velocity);
   const speed = relativeVelocity.length();
-  if (speed < 1) return;
-
-  if (brakeToggle.checked && (solarDistance >= rocket.brakeStartDistance || ALPHA_TARGET_DISTANCE_M-solarDistance <= (lorentzGamma(speed)-1)*C*C/drive.properAcceleration+speed*dt)) {
-    rocket.cruiseBrake = true;
+  const remainingToAlpha = Math.max(0, ALPHA_TARGET_DISTANCE_M - solarDistance);
+  let direction;
+  if (speed < 1) {
+    if (rocket.interstellarMission && remainingToAlpha > 1e9) {
+      rocket.cruiseBrake = false;
+      recomputeCruiseBrakePoint();
+      direction = (rocket.cruiseRenderDirection?.lengthSq() > 0
+        ? rocket.cruiseRenderDirection.clone()
+        : rocket.position.clone().sub(sun.position)).normalize();
+    } else {
+      return;
+    }
+  } else {
+    direction = relativeVelocity.normalize();
   }
 
-  const direction = relativeVelocity.normalize();
+  if (speed >= 1 && brakeToggle.checked && (solarDistance >= rocket.brakeStartDistance || ALPHA_TARGET_DISTANCE_M-solarDistance <= (lorentzGamma(speed)-1)*C*C/drive.properAcceleration+speed*dt)) {
+    rocket.cruiseBrake = true;
+  }
   const gamma = lorentzGamma(speed);
   const relativisticCeiling = 0.999999999 * C;
   const shieldCeiling = rocket.shieldSpeedLimitMps > 0 ? rocket.shieldSpeedLimitMps : relativisticCeiling;
@@ -1919,6 +1981,19 @@ function updateRocketAfterStep() {
   const solarDistance = rocket.position.distanceTo(sun.position);
   const radialVelocity = rocketRadialVelocity();
   rocket.minimumSolarDistance = Math.min(rocket.minimumSolarDistance, solarDistance);
+
+  if (rocket.interstellarMission && solarDistance >= ALPHA_TARGET_DISTANCE_M) {
+    rocket.reachedAlpha = true;
+    rocket.active = false;
+    rocket.plasmaThrustN = 0;
+    const arrivalSpeed = rocket.velocity.clone().sub(sun.velocity).length();
+    rocketStateStat.textContent = arrivalSpeed < 1000
+      ? "Alpha Centauri arrival · mission clock held"
+      : `Alpha Centauri arrival · ${formatSpeed(arrivalSpeed)} · mission clock held`;
+    holdMissionAtArrival("Alpha Centauri A/B");
+    if (typeof document !== "undefined") document.getElementById("launchButton").textContent = "NEW MISSION";
+    return;
+  }
 
   if (!rocket.oberthBurned) {
     for (const body of bodies) {
@@ -1964,7 +2039,9 @@ function updateRocketAfterStep() {
       rocket.reachedAlpha = true;
       rocket.active = false;
       const arrivalSpeed=rocket.velocity.clone().sub(sun.velocity).length();
-      rocketStateStat.textContent = arrivalSpeed<1000 ? "Alpha Centauri distance reached · low-speed arrival" : `Alpha Centauri distance crossed · fly-through at ${formatSpeed(arrivalSpeed)}`;
+      rocketStateStat.textContent = arrivalSpeed<1000 ? "Alpha Centauri arrival · mission clock held" : `Alpha Centauri arrival · ${formatSpeed(arrivalSpeed)} · mission clock held`;
+      holdMissionAtArrival("Alpha Centauri A/B");
+      if (typeof document !== "undefined") document.getElementById("launchButton").textContent = "NEW MISSION";
     } else if (rocket.cruiseActive) {
       if ((rocket.propellantRemainingKg ?? 0) <= 0) {
         rocketStateStat.textContent = "Plasma propellant exhausted · ballistic interstellar coast";
@@ -1988,8 +2065,19 @@ function resetSimulation(date = new Date()) {
   epochDate = new Date(date);
   simulatedSeconds = 0;
   physicsAccumulator = 0;
+  missionClockHold = false;
+  missionArrivalLabel = "";
+  isPlaying = true;
   rocket = null;
-  if(typeof document!=="undefined") document.getElementById("launchButton").textContent="Launch";
+  if(typeof document!=="undefined") {
+    document.getElementById("launchButton").textContent="LAUNCH";
+    const badge = document.getElementById("statusBadge");
+    if (badge) badge.textContent = "READY";
+    const play = document.getElementById("playButton");
+    if (play) play.textContent = "PAUSE";
+    const hold = document.getElementById("arrivalHoldValue");
+    if (hold) hold.textContent = "DISARMED";
+  }
   initializeBodies(epochDate);
   resetTrails();
   rebuildRocketTrail();
@@ -2627,10 +2715,19 @@ function updateRelativisticClocks(vInfinity, solarDistance) {
   travelerClockValue.textContent = formatEarthYears(rocket.travelerProperSeconds);
 
   if (rocket.reachedAlpha) {
-    earthClockProjection.textContent = `Alpha arrival: ${formatEarthYears(rocket.earthElapsedSeconds)}`;
-    travelerClockProjection.textContent = `Alpha arrival: ${formatEarthYears(rocket.travelerProperSeconds)}`;
+    earthClockProjection.textContent = `Alpha arrival: ${formatEarthYears(rocket.earthElapsedSeconds)} · HOLD`;
+    travelerClockProjection.textContent = `Alpha arrival: ${formatEarthYears(rocket.travelerProperSeconds)} · HOLD`;
     const saved = Math.max(0, rocket.earthElapsedSeconds - rocket.travelerProperSeconds);
     relativityDelta.textContent = `Traveler arrives younger by ${formatClockDifference(saved)}`;
+    return;
+  }
+
+  if (missionClockHold && rocket.lockedTo) {
+    earthClockValue.textContent = formatEarthYears(rocket.earthElapsedSeconds);
+    travelerClockValue.textContent = formatEarthYears(rocket.travelerProperSeconds);
+    earthClockProjection.textContent = `${rocket.lockedTo} arrival · HOLD`;
+    travelerClockProjection.textContent = `${rocket.lockedTo} arrival · HOLD`;
+    relativityDelta.textContent = "Mission clock frozen until next departure";
     return;
   }
 
@@ -2744,6 +2841,7 @@ function updateTelemetry() {
     updateThermalGauge(hullTempFill, hullTempValue, 300, HULL_LIMIT_K);
     updateThermalGauge(shieldTempFill, shieldTempValue, 300, SHIELD_LIMIT_K);
     updateRelativisticClocks(0, 0);
+    updateFuturisticHud(0, 0);
     return;
   }
 
@@ -2782,11 +2880,11 @@ function updateTelemetry() {
 
   plasmaElectricalStat.textContent = `${formatPower(rocket.acceleratorPowerW)} · ${formatNumber(rocket.acceleratorPowerW > 0 ? rocket.acceleratorPowerW / Math.max(rocket.coilCurrentA, 1) / 1e6 : 0, 2)} MV · ${formatNumber(rocket.coilCurrentA / 1000, 1)} kA`;
   plasmaMagneticStat.textContent = `${formatNumber(rocket.coilFieldT, 2)} T · L ${formatNumber(COIL_INDUCTANCE_H, 1)} H · R ${formatNumber(COIL_RESISTANCE_OHM, 4)} Ω`;
-  plasmaThrustStat.textContent = `${formatNumber(rocket.plasmaThrustN / 1000, 3)} kN · ṁ ${formatNumber(rocket.propellantFlowKgS, 6)} kg/s`;
+  plasmaThrustStat.textContent = `${formatNumber(rocket.plasmaThrustN / 1000, 2)} kN · vₑ ${formatSpeed(rocket.exhaustVelocityMps ?? 0)} · ṁ ${formatNumber(rocket.propellantFlowKgS, 6)} kg/s`;
   plasmaAccelerationStat.textContent = `${formatNumber(rocket.plasmaProperAcceleration / EARTH_G0, 4)} g · mass ${formatNumber((rocket.spacecraftMassKg ?? currentSpacecraftMassKg())/1000,2)} t`;
   document.getElementById("plasmaPressureStat").textContent = rocket.exhaustOpen ? `${formatNumber(rocket.chamberPressurePa ?? 0,2)} Pa · pressure ${formatNumber((rocket.pressureThrustN ?? 0)/1000,3)} kN + momentum ${formatNumber((rocket.momentumThrustN ?? 0)/1000,3)} kN` : `internal target ${formatNumber(rocket.chamberPressureRequestedPa ?? 0,2)} Pa · sealed/no feed · sustained 0 N`;
   const propellantFraction = (rocket.propellantInitialKg ?? 0) > 0 ? (rocket.propellantRemainingKg ?? 0) / rocket.propellantInitialKg : 0;
-  document.getElementById("propellantStat").textContent = `${formatNumber((rocket.propellantRemainingKg ?? 0)/1000,3)} t · ${formatNumber(propellantFraction*100,1)}% · ${rocket.exhaustOpen ? "venting" : "no exhaust"}`;
+  document.getElementById("propellantStat").textContent = `${formatNumber((rocket.propellantRemainingKg ?? 0)/1000,3)} t H₂ · ${formatNumber(propellantFraction*100,1)}% · ${rocket.exhaustOpen ? "feed active" : "no exhaust"}`;
   shieldEmfStat.textContent = `${formatNumber(rocket.shieldMagneticFieldT ?? 0, 2)} T · ${formatField(rocket.shieldMotionalFieldVm)} · ${formatVoltage(rocket.shieldMotionalEmfV)} across sheath`;
   shieldAttenuationStat.textContent = `${formatNumber((rocket.shieldAttenuation ?? 0) * 100, 1)}% MHD · ${formatHeatFlux(rocket.shieldParticleHeatFluxWm2)} → ${formatHeatFlux(rocket.shieldedParticleHeatFluxWm2)} · thermal ceiling ${rocket.shieldSpeedLimitMps > 0 ? (rocket.shieldSpeedLimitMps / C).toFixed(6) + " c" : "—"}`;
   const gapM = Number(casimirGapSlider.value) * 1e-9;
@@ -2843,6 +2941,47 @@ function updateTelemetry() {
   }
 
   updateRelativisticClocks(vInfinity, solarDistance);
+  updateFuturisticHud(solarDistance, displayedHelioSpeed);
+}
+
+function setHudBar(id, fraction) {
+  const element = document.getElementById(id);
+  if (element) element.style.width = `${clamp(fraction, 0, 1) * 100}%`;
+}
+
+function updateFuturisticHud(solarDistance = 0, displayedHelioSpeed = 0) {
+  const hold = document.getElementById("arrivalHoldValue");
+  if (hold) hold.textContent = missionClockHold ? "LOCKED" : "DISARMED";
+
+  const speedFraction = clamp(displayedHelioSpeed / C, 0, 1);
+  setHudBar("speedBarFill", Math.sqrt(speedFraction));
+  const speedValue = document.getElementById("speedBarValue");
+  if (speedValue) speedValue.textContent = `${speedFraction.toFixed(5)} c`;
+
+  const propellantFraction = rocket && (rocket.propellantInitialKg ?? 0) > 0
+    ? clamp((rocket.propellantRemainingKg ?? 0) / rocket.propellantInitialKg, 0, 1)
+    : 1;
+  setHudBar("propellantBarFill", propellantFraction);
+  const propellantValue = document.getElementById("propellantBarValue");
+  if (propellantValue) propellantValue.textContent = `${(100 * propellantFraction).toFixed(1)}%`;
+
+  const voltageFraction = clamp((voltageCeiling() - MAGNOS_REFERENCE_PEAK_V) / Math.max(MAGNOS_TBD_TARGET_V - MAGNOS_REFERENCE_PEAK_V, 1), 0, 1);
+  setHudBar("voltageBarFill", voltageFraction);
+  const voltageValue = document.getElementById("voltageBarValue");
+  if (voltageValue) voltageValue.textContent = formatVoltage(voltageCeiling());
+
+  let missionProgress = 0;
+  if (rocket?.reachedAlpha) missionProgress = 1;
+  else if (rocket?.interstellarMission) {
+    // Log-range HUD keeps outer-solar-system progress visible while preserving
+    // the actual physical distance used by the dynamics.
+    missionProgress = Math.log1p(Math.max(0, solarDistance) / AU)
+      / Math.log1p(ALPHA_TARGET_DISTANCE_M / AU);
+  } else if (rocket?.leg?.duration > 0) missionProgress = rocket.leg.elapsed / rocket.leg.duration;
+  else if (rocket?.lockedTo) missionProgress = 1;
+  setHudBar("missionProgressFill", missionProgress);
+  const missionValue = document.getElementById("missionProgressValue");
+  if (missionValue) missionValue.textContent = `${(100 * clamp(missionProgress, 0, 1)).toFixed(3)}%`;
 }
 
 function resizeRenderer() {
@@ -2928,11 +3067,11 @@ function updateMissionSummary() {
   const trip=interstellarEnvelope(ALPHA_TARGET_DISTANCE_M,drive.properAcceleration);
   const summary=document.getElementById("missionFeasibility");
   const burnTime = drive.propellantFlowKgS > 0 ? configuredPropellantMassKg() / drive.propellantFlowKgS : Infinity;
-  summary.textContent=trip ? `Alpha Cen A/B · 4.37 ly. Ideal constant-feed flip-and-brake: ${(trip.earthSeconds/YEAR).toFixed(2)} Earth yr / ${(trip.travelerSeconds/YEAR).toFixed(2)} traveler yr. Current ${formatNumber(configuredPropellantMassKg()/1000,1)} t load sustains max-feed exhaust for ${Number.isFinite(burnTime) ? formatElapsed(burnTime) : "∞"}; the ideal envelope is not a finite-propellant guarantee.` : "No powered interstellar solution with the current open-nozzle drive state";
+  summary.textContent=trip ? `Alpha Centauri A/B · 4.37 ly · automatic flip/brake. Fixed hydrogen feed reserve ${formatNumber(configuredPropellantMassKg()/1000,0)} t · full-command feed window ${Number.isFinite(burnTime) ? formatElapsed(burnTime) : "∞"}. Arrival freezes all mission clocks until a new departure.` : "No powered interstellar solution with the current drive state";
   document.getElementById("launchButton").disabled=Boolean(rocket?.active);
   document.getElementById("engineBankStat").textContent=`${engineCount()} × ${formatVoltage(voltageCeiling())} ceiling`;
   const bank=magnosBoosterForPlasma();
-  document.getElementById("bankSummary").textContent=`${bank.count} Magnos · ${bank.availableW.toFixed(2)} W auxiliary budget · target ${formatVoltage(bank.targetV)}. Pressure engine: ${drive.exhaustOpen ? `pₑ ${formatNumber(drive.chamberPressurePa,2)} Pa · pressure ${formatNumber(drive.pressureThrustN/1000,3)} kN + momentum ${formatNumber(drive.momentumThrustN/1000,3)} kN · open exhaust` : `internal target pₑ ${formatNumber(drive.chamberPressureRequestedPa,2)} Pa · sealed · 0 sustained thrust`}.`;
+  document.getElementById("bankSummary").textContent=`Magnos reference: 5 V / 1 A input annotation · ${formatVoltage(MAGNOS_REFERENCE_RMS_V)} RMS ≈ ${formatVoltage(MAGNOS_REFERENCE_PEAK_V)} peak baseline · ${formatVoltage(MAGNOS_TBD_TARGET_V)} schematic target marked TBD. Selected ${bank.count} stage(s), accelerator target ${formatVoltage(bank.targetV)}. Voltage-ratio reference is power-conserving; propulsion power is modeled separately.`;
   const leg=rocket?.leg?.encounter;
   document.getElementById("routeComparison").textContent=leg ? `${leg.method} · ${(leg.transferDuration/DAY).toFixed(1)} d · plasma Δv ${(leg.poweredDeltaV/1000).toFixed(1)} km/s · Hohmann baseline ${(leg.naturalTime/DAY).toFixed(1)} d (different arrival phase)` : "Tangent-matched plasma arcs · acceleration and braking included";
   const brake=magneticBrake({densityKgM3:INTERSTELLAR_NUMBER_DENSITY_M3*PROTON_MASS_KG,speed:rocket?.modeledHeliocentricSpeed||0,areaM2:SHIELD_AREA_M2,fieldT:rocket?.coilFieldT||0});
@@ -2943,6 +3082,8 @@ function updateMissionSummary() {
 function syncControls() {
   document.getElementById("engineCountValue").textContent=engineCount();
   document.getElementById("plasmaVoltageValue").textContent=formatVoltage(voltageCeiling());
+  const boosterStageValue = document.getElementById("boosterStageValue");
+  if (boosterStageValue) boosterStageValue.textContent = Math.round(setting("boosterCount", 1));
   document.getElementById("plasmaDensityValue").textContent=`1e${Number(document.getElementById("plasmaDensityExponent").value).toFixed(1)} m⁻³`;
   document.getElementById("electronTempValue").textContent=`${formatNumber(setting("electronTempKev", DEFAULT_ELECTRON_TEMPERATURE_KEV),1)} keV`;
   document.getElementById("ionTempValue").textContent=`${formatNumber(setting("ionTempKev", DEFAULT_ION_TEMPERATURE_KEV),1)} keV`;
@@ -2964,8 +3105,9 @@ function syncControls() {
 }
 
 playButton.addEventListener("click", () => {
+  if (missionClockHold) return;
   isPlaying = !isPlaying;
-  playButton.textContent = isPlaying ? "Pause" : "Play";
+  playButton.textContent = isPlaying ? "PAUSE" : "PLAY";
   statusBadge.textContent = isPlaying ? "RUNNING" : "PAUSED";
 });
 
@@ -2982,7 +3124,8 @@ for(const id of ["routeOrigin","routeTarget"]) {
   }
   select.value=id==="routeOrigin" ? "Earth" : "Mars";
 }
-const autoOption=document.createElement("option");autoOption.value="auto";autoOption.textContent="Alpha Cen via powered slingshots";document.getElementById("routeTarget").append(autoOption);
+const autoOption=document.createElement("option");autoOption.value="auto";autoOption.textContent="Alpha Centauri A/B";document.getElementById("routeTarget").append(autoOption);
+document.getElementById("routeTarget").value = "auto";
 launchButton.addEventListener("click", launchRocket);
 for(const id of ["engineCountSlider","plasmaVoltageSlider","voltageScale","boosterCount","radiatorTarget","plasmaDensityExponent","electronTempKev","ionTempKev","nozzleAreaSlider","propellantMassSlider"]) document.getElementById(id).addEventListener("input",syncControls);
 document.getElementById("exhaustToggle").addEventListener("change",syncControls);

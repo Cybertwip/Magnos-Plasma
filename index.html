@@ -3,159 +3,126 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Solar Slingshot</title>
+  <title>MAGNOS // Interstellar Flight Deck</title>
   <link rel="stylesheet" href="./style.css">
 </head>
 <body>
-  <main class="app-shell stage-shell">
-    <header class="topbar stage-topbar">
-      <div><p class="eyebrow">MISSION CONTROL / SOL SYSTEM</p><h1>Solar Slingshot</h1></div>
-      <div class="top-actions">
-        <button id="playButton" type="button">Pause</button>
-        <button id="resetButton" type="button" class="secondary">Reset</button>
-        <button id="launchButton" type="button" class="accent">Launch</button>
+  <main class="hud-shell">
+    <header class="hud-header">
+      <div class="brand-block">
+        <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+        <div>
+          <p class="micro">CYBERTWIP // MAGNOS PLASMA NAVIGATION</p>
+          <h1>INTERSTELLAR FLIGHT DECK</h1>
+        </div>
+      </div>
+      <div class="header-actions">
+        <span id="statusBadge" class="status-chip">READY</span>
+        <button id="playButton" type="button" class="ghost-button">PAUSE</button>
+        <button id="resetButton" type="button" class="ghost-button">RESET</button>
+        <button id="launchButton" type="button" class="launch-button">LAUNCH</button>
       </div>
     </header>
 
-    <section class="viewport-card stage-viewport">
-      <div id="viewport" class="viewport" aria-label="Interactive 3D solar system simulation">
-        <canvas id="sceneCanvas"></canvas>
-        <div id="labels" class="labels-layer" aria-hidden="true"></div>
+    <section class="flight-stage" id="viewport" aria-label="Interactive 3D solar system simulation">
+      <canvas id="sceneCanvas"></canvas>
+      <div id="labels" class="labels-layer" aria-hidden="true"></div>
+      <div class="scanline" aria-hidden="true"></div>
 
-        <div class="mission-clocks" aria-live="polite">
-          <article class="mission-clock earth-clock">
-            <span class="clock-kicker">EARTH</span>
-            <strong id="earthClockValue">0.000 Earth yr</strong>
-            <small id="earthClockProjection">Waiting for launch</small>
-          </article>
-          <article class="mission-clock traveler-clock">
-            <span class="clock-kicker">TRAVELER</span>
-            <strong id="travelerClockValue">0.000 Earth yr</strong>
-            <small id="travelerClockProjection">Waiting for launch</small>
-          </article>
-        </div>
-
-        <aside class="route-card">
-          <p class="eyebrow">POWERED TRANSFERS</p>
-          <div class="route-selects"><label>From<select id="routeOrigin"></select></label><label>To<select id="routeTarget"></select></label></div>
-          <p id="routeComparison">Tangent-matched plasma arcs</p>
-          <p id="missionFeasibility"></p>
-          <p id="brakeSummary"></p>
-          <label class="check-row"><input id="brakeToggle" type="checkbox" checked> Flip and brake at Alpha Centauri</label>
-          <label class="check-row"><input id="exhaustToggle" type="checkbox" checked> Magnetic nozzle open · plasma detaches and exhausts</label>
-          <label class="stage-control thermal-setting"><span>Radiator target</span><select id="radiatorTarget"><option value="600">600 K · reduced power</option><option value="900">900 K · balanced</option><option value="1216" selected>1216 K · maximum power</option></select></label>
-          <p class="muted">Thermal-limited sandbox. Low temperature means less thrust; radiators still run hot.</p>
-        </aside>
-        <aside class="flight-card">
-          <span id="statusBadge" class="badge">RUNNING</span>
-          <p id="rocketStateStat">Not launched</p>
-          <dl>
-            <div><dt>Speed</dt><dd id="rocketSpeedStat">—</dd></div>
-            <div><dt>Distance</dt><dd id="solarDistanceStat">—</dd></div>
-            <div><dt>Voltage target</dt><dd id="engineBankStat">2 × 10.0 MV</dd></div>
-            <div><dt>Thrust</dt><dd id="plasmaThrustStat">—</dd></div>
-            <div><dt>Chamber pressure</dt><dd id="plasmaPressureStat">—</dd></div>
-            <div><dt>Propellant</dt><dd id="propellantStat">20.0 t loaded</dd></div>
-            <div><dt>Route</dt><dd id="routeStat">Launch to fly</dd></div>
-          </dl>
-          <div class="thermal-gauges compact-thermals">
-            <div class="thermal-row">
-              <div class="thermal-label"><span>Coil</span><strong id="coilTempValue">300 K</strong></div>
-              <div class="thermal-track"><span id="coilTempFill" class="thermal-fill"></span></div>
-            </div>
-            <div class="thermal-row">
-              <div class="thermal-label"><span>Reactor</span><strong id="reactorTempValue">500 K</strong></div>
-              <div class="thermal-track"><span id="reactorTempFill" class="thermal-fill"></span></div>
-            </div>
-            <div class="thermal-row">
-              <div class="thermal-label"><span>Radiator</span><strong id="radiatorTempValue">300 K</strong></div>
-              <div class="thermal-track"><span id="radiatorTempFill" class="thermal-fill"></span></div>
-            </div>
-            <div class="thermal-row">
-              <div class="thermal-label"><span>Hull</span><strong id="hullTempValue">300 K</strong></div>
-              <div class="thermal-track"><span id="hullTempFill" class="thermal-fill"></span></div>
-            </div>
-            <div class="thermal-row">
-              <div class="thermal-label"><span>Shield</span><strong id="shieldTempValue">300 K</strong></div>
-              <div class="thermal-track"><span id="shieldTempFill" class="thermal-fill"></span></div>
-            </div>
+      <aside class="left-stack">
+        <section class="hud-panel mission-panel">
+          <div class="panel-heading"><span>01</span><strong>MISSION VECTOR</strong></div>
+          <div class="route-line">
+            <label><span>ORIGIN</span><select id="routeOrigin"></select></label>
+            <div class="route-arrow">→</div>
+            <label><span>TARGET</span><select id="routeTarget"></select></label>
           </div>
-        </aside>
+          <div class="mission-state"><span class="pulse-dot"></span><strong id="rocketStateStat">Awaiting launch command</strong></div>
+          <div class="metric-bar wide">
+            <div class="metric-head"><span>NAV RANGE (LOG)</span><strong id="missionProgressValue">0.000%</strong></div>
+            <div class="bar-track segmented"><span id="missionProgressFill" class="bar-fill"></span></div>
+          </div>
+          <p id="routeStat" class="route-text">Earth → Alpha Centauri A/B</p>
+          <p id="routeComparison" class="micro-copy">Powered gravity assists + continuous Magnos plasma cruise</p>
+          <p id="missionFeasibility" class="micro-copy"></p>
+          <p id="brakeSummary" class="micro-copy"></p>
+        </section>
 
-        <div class="stage-controls">
-          <label class="stage-control" for="speedSlider">
-            <span>Speed <strong id="speedValue">10 d/s</strong></span>
-            <input id="speedSlider" type="range" min="-2" max="2.5623" step="0.01" value="1">
-          </label>
-          <label class="stage-control" for="focusSelect">
-            <span>Camera</span>
-            <select id="focusSelect">
-              <option value="Sol">Sun</option>
-              <option value="Earth" selected>Earth</option>
-              <option value="Jupiter">Jupiter</option>
-              <option value="Rocket">Rocket</option>
-            </select>
-          </label>
-          <label class="stage-control" for="engineCountSlider">
-            <span>Plasma engines <strong id="engineCountValue">1</strong></span>
-            <input id="engineCountSlider" type="range" min="1" max="8" step="1" value="1">
-          </label>
-          <label class="stage-control" for="plasmaVoltageSlider">
-            <span>Voltage target <strong id="plasmaVoltageValue">10.0 MV</strong></span>
-            <input id="plasmaVoltageSlider" type="range" min="1" max="100" step="0.5" value="10">
-          </label>
-          <label class="stage-control" for="plasmaDensityExponent">
-            <span>Plasma density <strong id="plasmaDensityValue">1e17.0 m⁻³</strong></span>
-            <input id="plasmaDensityExponent" type="range" min="14" max="20" step="0.1" value="17">
-          </label>
-          <label class="stage-control" for="electronTempKev">
-            <span>Electron Tₑ <strong id="electronTempValue">30.0 keV</strong></span>
-            <input id="electronTempKev" type="range" min="1" max="100" step="1" value="30">
-          </label>
-          <label class="stage-control" for="ionTempKev">
-            <span>Ion Tᵢ <strong id="ionTempValue">10.0 keV</strong></span>
-            <input id="ionTempKev" type="range" min="1" max="100" step="1" value="10">
-          </label>
-          <label class="stage-control" for="nozzleAreaSlider">
-            <span>Nozzle exit <strong id="nozzleAreaValue">0.25 m²/engine</strong></span>
-            <input id="nozzleAreaSlider" type="range" min="0.05" max="1.00" step="0.05" value="0.25">
-          </label>
-          <label class="stage-control" for="propellantMassSlider">
-            <span>Argon load <strong id="propellantMassValue">20.0 t</strong></span>
-            <input id="propellantMassSlider" type="range" min="1" max="100" step="0.5" value="20">
-          </label>
-          <label class="stage-control"><span>Voltage scale</span><select id="voltageScale"><option value="1000000">MV</option><option value="1000000000">GV</option><option value="1000000000000">TV</option></select></label>
-          <label class="stage-control"><span>Magnos stages</span><select id="boosterCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
-          <p id="bankSummary" class="bank-summary"></p>
+        <section class="hud-panel clock-panel">
+          <div class="panel-heading"><span>02</span><strong>MISSION CLOCKS</strong></div>
+          <div class="clock-grid">
+            <div class="clock-cell"><span>EARTH FRAME</span><strong id="earthClockValue">0.000 Earth yr</strong><small id="earthClockProjection">Waiting for launch</small></div>
+            <div class="clock-cell"><span>TRAVELER</span><strong id="travelerClockValue">0.000 Earth yr</strong><small id="travelerClockProjection">Waiting for launch</small></div>
+          </div>
+          <div class="hold-indicator"><span>ARRIVAL HOLD</span><strong id="arrivalHoldValue">DISARMED</strong></div>
+        </section>
+      </aside>
+
+      <aside class="right-stack">
+        <section class="hud-panel telemetry-panel">
+          <div class="panel-heading"><span>03</span><strong>FLIGHT CORE</strong></div>
+          <div class="telemetry-value"><span>VELOCITY</span><strong id="rocketSpeedStat">—</strong></div>
+          <div class="metric-bar"><div class="metric-head"><span>LIGHT SPEED FRACTION</span><strong id="speedBarValue">0.000 c</strong></div><div class="bar-track"><span id="speedBarFill" class="bar-fill"></span></div></div>
+          <div class="telemetry-value"><span>SOLAR RANGE</span><strong id="solarDistanceStat">—</strong></div>
+          <div class="telemetry-value"><span>PLASMA THRUST</span><strong id="plasmaThrustStat">—</strong></div>
+          <div class="metric-bar"><div class="metric-head"><span>PROPELLANT RESERVE</span><strong id="propellantBarValue">100%</strong></div><div class="bar-track"><span id="propellantBarFill" class="bar-fill"></span></div></div>
+          <div class="telemetry-value"><span>CHAMBER PRESSURE</span><strong id="plasmaPressureStat">—</strong></div>
+          <div class="telemetry-value"><span>MAGNOS BUS</span><strong id="engineBankStat">—</strong></div>
+          <div class="metric-bar"><div class="metric-head"><span>MAGNOS VOLTAGE</span><strong id="voltageBarValue">—</strong></div><div class="bar-track"><span id="voltageBarFill" class="bar-fill"></span></div></div>
+          <div class="telemetry-value"><span>PROPELLANT</span><strong id="propellantStat">—</strong></div>
+        </section>
+
+        <section class="hud-panel thermal-panel">
+          <div class="panel-heading"><span>04</span><strong>THERMAL ENVELOPE</strong></div>
+          <div class="thermal-row"><div class="thermal-label"><span>COIL</span><strong id="coilTempValue">300 K</strong></div><div class="bar-track thin"><span id="coilTempFill" class="thermal-fill"></span></div></div>
+          <div class="thermal-row"><div class="thermal-label"><span>REACTOR</span><strong id="reactorTempValue">500 K</strong></div><div class="bar-track thin"><span id="reactorTempFill" class="thermal-fill"></span></div></div>
+          <div class="thermal-row"><div class="thermal-label"><span>RADIATOR</span><strong id="radiatorTempValue">300 K</strong></div><div class="bar-track thin"><span id="radiatorTempFill" class="thermal-fill"></span></div></div>
+          <div class="thermal-row"><div class="thermal-label"><span>HULL</span><strong id="hullTempValue">300 K</strong></div><div class="bar-track thin"><span id="hullTempFill" class="thermal-fill"></span></div></div>
+          <div class="thermal-row"><div class="thermal-label"><span>SHIELD</span><strong id="shieldTempValue">300 K</strong></div><div class="bar-track thin"><span id="shieldTempFill" class="thermal-fill"></span></div></div>
+        </section>
+      </aside>
+
+      <section class="magnos-console hud-panel">
+        <div class="panel-heading inline"><span>05</span><strong>MAGNOS PLASMA ENGINE BUS</strong><em>5 V reference → 42.4 kVpk baseline // up to 10 MV target model</em></div>
+        <div class="magnos-grid">
+          <label class="bar-control" for="engineCountSlider"><span>ENGINE BANK <strong id="engineCountValue">4</strong></span><input id="engineCountSlider" type="range" min="1" max="8" step="1" value="4"></label>
+          <label class="bar-control" for="boosterCount"><span>MAGNOS STAGES <strong id="boosterStageValue">1</strong></span><input id="boosterCount" type="range" min="1" max="8" step="1" value="1"></label>
+          <label class="bar-control" for="plasmaVoltageSlider"><span>ACCELERATOR TARGET <strong id="plasmaVoltageValue">10.00 MV</strong></span><input id="plasmaVoltageSlider" type="range" min="42.4" max="10000" step="10" value="10000"></label>
+          <label class="bar-control" for="cruiseThrustSlider"><span>PLASMA COMMAND <strong id="cruiseThrustValue">100%</strong></span><input id="cruiseThrustSlider" type="range" min="0" max="100" step="1" value="100"></label>
+          <label class="bar-control" for="speedSlider"><span>SIMULATION RATE <strong id="speedValue">10 d/s</strong></span><input id="speedSlider" type="range" min="-2" max="3.5623" step="0.01" value="1"></label>
+          <label class="compact-select"><span>CAMERA</span><select id="focusSelect"><option value="Sol">SUN</option><option value="Earth" selected>EARTH</option><option value="Jupiter">JUPITER</option><option value="Rocket">ROCKET</option></select></label>
         </div>
-      </div>
+        <p id="bankSummary" class="bank-summary"></p>
+      </section>
     </section>
   </main>
 
+  <!-- Fixed engineering assumptions kept out of the primary cockpit UI. -->
   <div class="internal-controls" hidden aria-hidden="true">
+    <select id="voltageScale"><option value="1000" selected>kV</option></select>
+    <select id="radiatorTarget"><option value="1216" selected>1216 K</option></select>
+    <input id="plasmaDensityExponent" type="range" min="14" max="22" step="0.1" value="17"><span id="plasmaDensityValue"></span>
+    <input id="electronTempKev" type="range" min="1" max="100" step="1" value="30"><span id="electronTempValue"></span>
+    <input id="ionTempKev" type="range" min="1" max="100" step="1" value="10"><span id="ionTempValue"></span>
+    <input id="nozzleAreaSlider" type="range" min="0.05" max="1" step="0.05" value="0.25"><span id="nozzleAreaValue"></span>
+    <input id="propellantMassSlider" type="range" min="1" max="5000" value="1000"><span id="propellantMassValue"></span>
+    <input id="exhaustToggle" type="checkbox" checked>
+    <input id="brakeToggle" type="checkbox" checked>
     <input id="injectionSlider" type="range" min="0" max="20" step="0.1" value="3.2"><span id="injectionValue"></span>
     <input id="flybySlider" type="range" min="100" max="50000" step="100" value="500"><span id="flybyValue"></span>
-    <input id="cruiseThrustSlider" type="range" min="0" max="100" step="1" value="100"><span id="cruiseThrustValue"></span>
     <input id="casimirGapSlider" type="range" min="10" max="500" step="5" value="100"><span id="casimirGapValue"></span>
     <input id="oberthSlider" type="range" min="0" max="20" step="0.1" value="8"><span id="oberthValue"></span>
     <input id="periSlider" type="range" min="3" max="20" step="0.5" value="8"><span id="periValue"></span>
-    <input id="trailToggle" type="checkbox" checked>
-    <input id="labelToggle" type="checkbox" checked>
-    <input id="rocketTrailToggle" type="checkbox" checked>
-    <input id="magnosGain" type="number" min="1" max="6000" step="1" value="1">
-    <select id="magnosLoad"><option value="plasma" selected>plasma</option></select>
+    <input id="trailToggle" type="checkbox" checked><input id="labelToggle" type="checkbox" checked><input id="rocketTrailToggle" type="checkbox" checked>
+    <input id="magnosGain" type="number" value="1"><select id="magnosLoad"><option value="plasma">plasma</option></select>
     <span id="dateStat"></span><span id="elapsedStat"></span><span id="sunBaryStat"></span><span id="energyDriftStat"></span>
     <span id="assistGainStat"></span><span id="propulsorStat"></span><span id="casimirStat"></span><span id="spaceTempStat"></span>
-    <span id="closestStat"></span><span id="vinfStat"></span><span id="oberthStat"></span>
-    <span id="peakSpeedStat"></span><span id="helioSpeedStat"></span><span id="alphaStat"></span><span id="solarExitStat"></span>
-    <span id="magnosInput"></span><span id="magnosOutput"></span><span id="magnosStatus"></span>
-    <span id="plasmaElectricalStat"></span><span id="plasmaMagneticStat"></span>
-    <span id="plasmaAccelerationStat"></span>
-    <span id="shieldEmfStat"></span><span id="shieldAttenuationStat"></span>
-    <span id="radiatorDeployStat"></span><span id="thermalGovernorStat"></span>
+    <span id="closestStat"></span><span id="vinfStat"></span><span id="oberthStat"></span><span id="peakSpeedStat"></span><span id="helioSpeedStat"></span>
+    <span id="alphaStat"></span><span id="solarExitStat"></span><span id="magnosInput"></span><span id="magnosOutput"></span><span id="magnosStatus"></span>
+    <span id="plasmaElectricalStat"></span><span id="plasmaMagneticStat"></span><span id="plasmaAccelerationStat"></span>
+    <span id="shieldEmfStat"></span><span id="shieldAttenuationStat"></span><span id="radiatorDeployStat"></span><span id="thermalGovernorStat"></span>
     <span id="relativityDelta"></span>
   </div>
-
   <script type="module" src="./app.js"></script>
 </body>
 </html>
