@@ -65,3 +65,11 @@ dt,dd { font:11px/1.5 ui-monospace,monospace; } dt { color:var(--muted); } dd { 
  .labels-layer { top:120px; height:300px; }
  .route-card,.flight-card,.stage-controls { position:relative; top:auto; bottom:auto; left:auto; right:auto; width:auto; margin:10px; }
 }
+
+/* Plasma pressure-engine upgrade */
+.route-card .check-row { line-height:1.35; }
+.stage-controls { row-gap:12px; }
+#plasmaPressureStat,#propellantStat { max-width:72%; }
+@media(min-width:1051px) {
+  .viewport { min-height:900px; }
+}

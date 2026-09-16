@@ -42,6 +42,7 @@
           <p id="missionFeasibility"></p>
           <p id="brakeSummary"></p>
           <label class="check-row"><input id="brakeToggle" type="checkbox" checked> Flip and brake at Alpha Centauri</label>
+          <label class="check-row"><input id="exhaustToggle" type="checkbox" checked> Magnetic nozzle open · plasma detaches and exhausts</label>
           <label class="stage-control thermal-setting"><span>Radiator target</span><select id="radiatorTarget"><option value="600">600 K · reduced power</option><option value="900">900 K · balanced</option><option value="1216" selected>1216 K · maximum power</option></select></label>
           <p class="muted">Thermal-limited sandbox. Low temperature means less thrust; radiators still run hot.</p>
         </aside>
@@ -53,6 +54,8 @@
             <div><dt>Distance</dt><dd id="solarDistanceStat">—</dd></div>
             <div><dt>Voltage target</dt><dd id="engineBankStat">2 × 10.0 MV</dd></div>
             <div><dt>Thrust</dt><dd id="plasmaThrustStat">—</dd></div>
+            <div><dt>Chamber pressure</dt><dd id="plasmaPressureStat">—</dd></div>
+            <div><dt>Propellant</dt><dd id="propellantStat">20.0 t loaded</dd></div>
             <div><dt>Route</dt><dd id="routeStat">Launch to fly</dd></div>
           </dl>
           <div class="thermal-gauges compact-thermals">
@@ -100,6 +103,26 @@
           <label class="stage-control" for="plasmaVoltageSlider">
             <span>Voltage target <strong id="plasmaVoltageValue">10.0 MV</strong></span>
             <input id="plasmaVoltageSlider" type="range" min="1" max="100" step="0.5" value="10">
+          </label>
+          <label class="stage-control" for="plasmaDensityExponent">
+            <span>Plasma density <strong id="plasmaDensityValue">1e17.0 m⁻³</strong></span>
+            <input id="plasmaDensityExponent" type="range" min="14" max="20" step="0.1" value="17">
+          </label>
+          <label class="stage-control" for="electronTempKev">
+            <span>Electron Tₑ <strong id="electronTempValue">30.0 keV</strong></span>
+            <input id="electronTempKev" type="range" min="1" max="100" step="1" value="30">
+          </label>
+          <label class="stage-control" for="ionTempKev">
+            <span>Ion Tᵢ <strong id="ionTempValue">10.0 keV</strong></span>
+            <input id="ionTempKev" type="range" min="1" max="100" step="1" value="10">
+          </label>
+          <label class="stage-control" for="nozzleAreaSlider">
+            <span>Nozzle exit <strong id="nozzleAreaValue">0.25 m²/engine</strong></span>
+            <input id="nozzleAreaSlider" type="range" min="0.05" max="1.00" step="0.05" value="0.25">
+          </label>
+          <label class="stage-control" for="propellantMassSlider">
+            <span>Argon load <strong id="propellantMassValue">20.0 t</strong></span>
+            <input id="propellantMassSlider" type="range" min="1" max="100" step="0.5" value="20">
           </label>
           <label class="stage-control"><span>Voltage scale</span><select id="voltageScale"><option value="1000000">MV</option><option value="1000000000">GV</option><option value="1000000000000">TV</option></select></label>
           <label class="stage-control"><span>Magnos stages</span><select id="boosterCount"><option>1</option><option>2</option><option>3</option><option>4</option><option>5</option><option>6</option><option>7</option><option>8</option></select></label>
